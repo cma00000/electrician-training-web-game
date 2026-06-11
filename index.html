@@ -28,9 +28,8 @@
   html,body{width:100%;height:100%;overflow:hidden;background:var(--ink);font-family:var(--sans);color:var(--txt)}
   #c{position:fixed;inset:0;display:block}
 
-  /* ---------- crosshair & prompt ---------- */
-  #crosshair{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border:1.5px solid #fff;border-radius:50%;opacity:.85;pointer-events:none;z-index:5;box-shadow:0 0 4px rgba(0,0,0,.6)}
-  #crosshair.hot{border-color:var(--orange);box-shadow:0 0 8px var(--orange)}
+  /* ---------- crosshair（已由 3D 光标替代，隐藏） ---------- */
+  #crosshair{display:none}
   #prompt{position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);background:rgba(20,24,28,.85);border:1px solid var(--line);border-left:3px solid var(--orange);padding:7px 14px;font-size:14px;border-radius:4px;pointer-events:none;z-index:5;white-space:nowrap;display:none}
   #prompt b{color:var(--orange);font-family:var(--mono)}
   #tester-tip{position:fixed;left:50%;top:calc(50% - 46px);transform:translateX(-50%);font-family:var(--mono);font-size:13px;padding:5px 12px;border-radius:4px;z-index:5;display:none;pointer-events:none}
@@ -53,13 +52,15 @@
   #workorder footer{padding:6px 16px 12px;font-family:var(--mono);font-size:11px;color:#7a7468;border-top:1px dashed #c9c2b2}
 
   /* ---------- toolbar ---------- */
-  #toolbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;z-index:6}
-  .slot{width:74px;background:rgba(29,35,41,.92);border:1px solid var(--line);border-radius:6px;padding:8px 4px 6px;text-align:center;cursor:pointer;transition:transform .1s,border-color .1s}
-  .slot .key{font-family:var(--mono);font-size:10px;color:var(--txt-dim)}
-  .slot .icon{font-size:21px;line-height:1.5}
-  .slot .name{font-size:11px;color:var(--txt-dim)}
-  .slot.active{border-color:var(--orange);transform:translateY(-5px);background:rgba(43,32,24,.95)}
+  #toolbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:7px;z-index:6}
+  .slot{width:82px;background:rgba(18,23,28,.94);border:1px solid var(--line);border-radius:7px;padding:6px 4px 5px;text-align:center;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;position:relative}
+  .slot::before{content:'';position:absolute;inset:0;border-radius:7px;background:linear-gradient(160deg,rgba(255,255,255,.04) 0%,transparent 60%);pointer-events:none}
+  .slot .key{font-family:var(--mono);font-size:10px;color:var(--txt-dim);margin-bottom:3px;letter-spacing:.08em}
+  .slot canvas{display:block;margin:0 auto 3px;border-radius:4px;image-rendering:pixelated}
+  .slot .name{font-size:10px;color:var(--txt-dim);letter-spacing:.04em}
+  .slot.active{border-color:var(--orange);border-width:1.5px;transform:translateY(-6px);background:rgba(38,24,12,.97)}
   .slot.active .name{color:var(--orange)}
+  .slot.active canvas{box-shadow:0 0 10px rgba(255,106,0,.45)}
 
   /* ---------- multimeter LCD ---------- */
   #meter{position:fixed;right:18px;bottom:18px;width:215px;background:#21262b;border:1px solid #444;border-radius:10px;padding:12px;z-index:6;display:none;box-shadow:0 8px 20px rgba(0,0,0,.55)}
@@ -484,7 +485,194 @@ const M = {
 const box = (w,h,d,m)=> new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
 const cyl = (rt,rb,h,m,seg=14)=> new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m);
 
-// ---------------- 餐厅搭建 ----------------
+// ===== HOVER GLOW =====
+function setupGlowMat(mesh){
+  const orig=mesh.material;
+  let glow;
+  if(orig.isMeshBasicMaterial){
+    glow=orig.clone();
+    const c=orig.color.clone();
+    glow.color.setRGB(Math.min(c.r+.4,1), Math.min(c.g*.6+.15,1), Math.min(c.b*.2,1));
+  }else{
+    glow=orig.clone();
+    glow.emissive=new THREE.Color(0xff5200);
+    glow.emissiveIntensity=.45;
+  }
+  mesh.userData._origMat=orig;
+  mesh.userData._glowMat=glow;
+}
+function setHoverGlow(opt,on){
+  for(const m of allMeshes){
+    if(m.userData.ia===opt && m.userData._origMat){
+      m.material=on?m.userData._glowMat:m.userData._origMat;
+    }
+  }
+}
+
+// ===== 3-D CURSOR =====
+// 所有光标挂在 camera 子节点上，material.depthTest=false 保证始终渲染在最上层
+const CM=hex=>new THREE.MeshBasicMaterial({color:hex,depthTest:false,depthWrite:false});
+function cursorMesh(geo,hex){ const m=new THREE.Mesh(geo,CM(hex)); m.renderOrder=999; return m; }
+
+function buildCursors(){
+  const root=new THREE.Group(); camera.add(root); root.position.z=-.44;
+  const groups=[];
+
+  // Tool 0: 瞄准括号 (徒手)
+  const t0=new THREE.Group(); root.add(t0);
+  [[0,1],[0,-1],[1,0],[-1,0]].forEach(([sx,sy])=>{
+    const b=cursorMesh(new THREE.BoxGeometry(.0048,.0014,.0002),0xffffff);
+    b.position.set(sx*.011, sy*.011, 0); b.rotation.z=sx?0:Math.PI/2; t0.add(b);
+  });
+  const dot=cursorMesh(new THREE.BoxGeometry(.0018,.0018,.0002),0xffffff); t0.add(dot);
+  groups.push(t0);
+
+  // Tool 1: 验电笔
+  const t1=new THREE.Group(); root.add(t1); t1.visible=false;
+  const penBody=cursorMesh(new THREE.CylinderGeometry(.003,.0026,.044,8),0xf2c230);
+  penBody.rotation.x=Math.PI/2; penBody.position.z=-.002; t1.add(penBody);
+  const penTip=cursorMesh(new THREE.ConeGeometry(.003,.01,6),0xc77b3f);
+  penTip.rotation.x=-Math.PI/2; penTip.position.z=.027; t1.add(penTip);
+  const led=cursorMesh(new THREE.SphereGeometry(.002,6,6),0xff3333);
+  led.position.set(.0,.004,-.016); t1.add(led);
+  groups.push(t1);
+
+  // Tool 2: 万用表
+  const t2=new THREE.Group(); root.add(t2); t2.visible=false;
+  const mbody=cursorMesh(new THREE.BoxGeometry(.022,.03,.007),0x1c2530); t2.add(mbody);
+  const mscr=cursorMesh(new THREE.BoxGeometry(.013,.01,.001),0x9fb08a); mscr.position.set(0,.005,.004); t2.add(mscr);
+  const mp1=cursorMesh(new THREE.CylinderGeometry(.0012,.0012,.024,6),0xff4040);
+  mp1.rotation.x=Math.PI/2; mp1.position.set(-.005,-.02,.012); t2.add(mp1);
+  const mp2=cursorMesh(new THREE.CylinderGeometry(.0012,.0012,.024,6),0x888888);
+  mp2.rotation.x=Math.PI/2; mp2.position.set(.005,-.02,.012); t2.add(mp2);
+  groups.push(t2);
+
+  // Tool 3: 线缆轴盘
+  const t3=new THREE.Group(); root.add(t3); t3.visible=false;
+  const hub=cursorMesh(new THREE.CylinderGeometry(.007,.007,.022,10),0x444950);
+  hub.rotation.z=Math.PI/2; t3.add(hub);
+  [-1,1].forEach(s=>{ const fl=cursorMesh(new THREE.CylinderGeometry(.015,.015,.003,12),0x2a2d31);
+    fl.rotation.z=Math.PI/2; fl.position.x=s*.013; t3.add(fl); });
+  const coil=cursorMesh(new THREE.TorusGeometry(.012,.003,6,14),0xc77b3f);
+  coil.rotation.y=Math.PI/2; t3.add(coil);
+  groups.push(t3);
+
+  // Tool 4: 螺丝刀
+  const t4=new THREE.Group(); root.add(t4); t4.visible=false;
+  const hndl=cursorMesh(new THREE.CylinderGeometry(.006,.005,.026,8),0xff6a00);
+  hndl.rotation.x=Math.PI/2; hndl.position.z=.006; t4.add(hndl);
+  [-.008,0,.008].forEach(z=>{ const ridge=cursorMesh(new THREE.CylinderGeometry(.0072,.0072,.002,8),0xb84a00);
+    ridge.rotation.x=Math.PI/2; ridge.position.z=z; t4.add(ridge); });
+  const shaft=cursorMesh(new THREE.CylinderGeometry(.0018,.0018,.028,6),0xb9bdc2);
+  shaft.rotation.x=Math.PI/2; shaft.position.z=-.021; t4.add(shaft);
+  const tip=cursorMesh(new THREE.BoxGeometry(.006,.001,.003),0x888888);
+  tip.position.z=-.036; t4.add(tip);
+  groups.push(t4);
+
+  return groups;
+}
+
+// ===== 工具栏 3D 缩略图渲染 =====
+// 每个工具独立建模，用于缩略图渲染（与光标建模相互独立，比例更大）
+const THUMB_BUILDERS=[
+  ()=>{ // 0 手套 / 目标瞄准
+    const g=new THREE.Group();
+    const pho=(c,s=50)=>new THREE.MeshPhongMaterial({color:c,shininess:s});
+    for(let i=0;i<4;i++){
+      const b=new THREE.Mesh(new THREE.BoxGeometry(.012,.004,.004),pho(0xe8e4da));
+      b.position.set(-.018+i*.012,.028,0); g.add(b);
+    }
+    const palm=new THREE.Mesh(new THREE.BoxGeometry(.046,.038,.01),pho(0xe8e4da));
+    palm.position.y=.003; g.add(palm);
+    const thumb=new THREE.Mesh(new THREE.BoxGeometry(.022,.008,.009),pho(0xe8e4da));
+    thumb.position.set(.028,-.004,0); g.add(thumb);
+    // 橙色袖口
+    const cuff=new THREE.Mesh(new THREE.BoxGeometry(.052,.012,.012),pho(0xff6a00,70));
+    cuff.position.y=-.024; g.add(cuff);
+    return g;
+  },
+  ()=>{ // 1 验电笔
+    const g=new THREE.Group();
+    const pho=(c,s=50)=>new THREE.MeshPhongMaterial({color:c,shininess:s});
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.013,.011,.09,10),pho(0xf2c230,70));
+    body.rotation.z=.5; g.add(body);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,.02,10),pho(0xff6a00,60));
+    cap.rotation.z=.5; cap.position.set(-.044,.025,0); g.add(cap);
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.012,.024,8),pho(0xc77b3f,60));
+    tip.rotation.z=.5+Math.PI; tip.position.set(.048,-.027,0); g.add(tip);
+    const led=new THREE.Mesh(new THREE.SphereGeometry(.005,8,8),new THREE.MeshPhongMaterial({color:0xff2020,emissive:0x880000,shininess:90}));
+    led.position.set(0,.016,0.01); g.add(led);
+    return g;
+  },
+  ()=>{ // 2 万用表
+    const g=new THREE.Group();
+    const pho=(c,s=50)=>new THREE.MeshPhongMaterial({color:c,shininess:s});
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.065,.09,.022),pho(0x1c2530,30));
+    g.add(body);
+    const screen=new THREE.Mesh(new THREE.BoxGeometry(.042,.028,.002),new THREE.MeshPhongMaterial({color:0x9fb08a,emissive:0x1a2a14,shininess:90}));
+    screen.position.set(0,.016,.013); g.add(screen);
+    const dial=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.006,16),pho(0x2a3540,40));
+    dial.position.set(0,-.022,.014); g.add(dial);
+    const pr=new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,.055,8),pho(0xff3030,60));
+    pr.position.set(-.018,-.058,.012); g.add(pr);
+    const pb=new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,.055,8),pho(0x333333,50));
+    pb.position.set(.018,-.058,.012); g.add(pb);
+    return g;
+  },
+  ()=>{ // 3 线缆盘
+    const g=new THREE.Group();
+    const pho=(c,s=50)=>new THREE.MeshPhongMaterial({color:c,shininess:s});
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.06,14),pho(0x3a4048,30));
+    hub.rotation.z=Math.PI/2; g.add(hub);
+    [-1,1].forEach(s=>{ const fl=new THREE.Mesh(new THREE.CylinderGeometry(.044,.044,.009,14),pho(0x22262b,20));
+      fl.rotation.z=Math.PI/2; fl.position.x=s*.036; g.add(fl); });
+    const coil=new THREE.Mesh(new THREE.TorusGeometry(.034,.009,8,16),pho(0xc77b3f,70));
+    coil.rotation.y=Math.PI/2; g.add(coil);
+    const wire=new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,.032,6),pho(0xa06030,40));
+    wire.rotation.z=Math.PI/4; wire.position.set(.028,.028,0); g.add(wire);
+    return g;
+  },
+  ()=>{ // 4 螺丝刀
+    const g=new THREE.Group();
+    const pho=(c,s=50)=>new THREE.MeshPhongMaterial({color:c,shininess:s});
+    const handle=new THREE.Mesh(new THREE.CylinderGeometry(.018,.014,.065,10),pho(0xff6a00,70));
+    handle.rotation.z=.45; handle.position.set(-.022,.024,0); g.add(handle);
+    for(let i=0;i<4;i++){
+      const ridge=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.004,10),pho(0xb84a00,60));
+      ridge.rotation.z=.45; ridge.position.set(-.022+i*.001,.024-i*.016,0); g.add(ridge);
+    }
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.009,.007,.018,8),pho(0x888888,80));
+    neck.rotation.z=.45; neck.position.set(.006,-.014,0); g.add(neck);
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.006,.005,.072,8),pho(0xb9bdc2,90));
+    shaft.rotation.z=.45; shaft.position.set(.034,-.048,0); g.add(shaft);
+    const tip=new THREE.Mesh(new THREE.BoxGeometry(.016,.003,.009),pho(0x777777,80));
+    tip.rotation.z=.45; tip.position.set(.06,-.072,0); g.add(tip);
+    return g;
+  },
+];
+
+function makeThumbnail(builderFn, size=68){
+  const cv=document.createElement('canvas'); cv.width=cv.height=size;
+  try{
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+    r.setClearColor(0,0);
+    const s=new THREE.Scene();
+    s.add(new THREE.AmbientLight(0x505a60,.9));
+    const d1=new THREE.DirectionalLight(0xffd080,2.2); d1.position.set(2,3,4); s.add(d1);
+    const d2=new THREE.DirectionalLight(0x4488cc,.5); d2.position.set(-2,-1,-2); s.add(d2);
+    const obj=builderFn(); s.add(obj);
+    const bbox=new THREE.Box3().setFromObject(obj);
+    const bc=new THREE.Vector3(); bbox.getCenter(bc);
+    const bsz=new THREE.Vector3(); bbox.getSize(bsz);
+    const md=Math.max(bsz.x,bsz.y,bsz.z)*.5;
+    const cam=new THREE.PerspectiveCamera(38,1,.001,100);
+    cam.position.set(bc.x+md*1.4, bc.y+md*1.1, bc.z+md*1.7); cam.lookAt(bc);
+    r.setSize(size,size); r.render(s,cam); r.dispose();
+  }catch(e){}
+  return cv;
+}
+
+// ===== 餐厅搭建 =====
 const ROOM = {w:17, d:13, h:3.4};   // x:-8.5..8.5  z:-6.5..6.5  厨房 z<-1.6
 function buildRoom(){
   // 地板：用餐区木地板 / 厨房瓷砖
@@ -713,35 +901,51 @@ function movePlayer(dt){
 
 // ---------------- 工具系统 ----------------
 const TOOLS=[
-  {icon:'✋', name:'徒手',   key:'1'},
-  {icon:'🖊️', name:'验电笔', key:'2'},
-  {icon:'📟', name:'万用表', key:'3'},
-  {icon:'🔌', name:'线缆',   key:'4'},
-  {icon:'🪛', name:'螺丝刀', key:'5'},
+  {name:'徒手',   key:'1'},
+  {name:'验电笔', key:'2'},
+  {name:'万用表', key:'3'},
+  {name:'线缆',   key:'4'},
+  {name:'螺丝刀', key:'5'},
 ];
 let tool=0;
 const toolbar=document.getElementById('toolbar');
-TOOLS.forEach((t,i)=>{
-  const d=document.createElement('div'); d.className='slot'+(i===0?' active':'');
-  d.innerHTML=`<div class="key">[${t.key}]</div><div class="icon">${t.icon}</div><div class="name">${t.name}</div>`;
-  d.onclick=()=>setTool(i); toolbar.appendChild(d);
-});
+const toolbarSlots=[];
+
+// 在 buildCursors() + makeThumbnail 都就绪后调用
+function initToolbar(){
+  TOOLS.forEach((t,i)=>{
+    const d=document.createElement('div'); d.className='slot'+(i===0?' active':'');
+    const keyEl=document.createElement('div'); keyEl.className='key'; keyEl.textContent=`[${t.key}]`;
+    const cv=makeThumbnail(THUMB_BUILDERS[i]); cv.width=64; cv.height=64;
+    const nameEl=document.createElement('div'); nameEl.className='name'; nameEl.textContent=t.name;
+    d.appendChild(keyEl); d.appendChild(cv); d.appendChild(nameEl);
+    d.onclick=()=>setTool(i); toolbar.appendChild(d); toolbarSlots.push(d);
+  });
+}
 function setTool(i){
   if(i===3 && !G.hasWire){ toast('材料未到','先完成负载计算，才能从货车上领 10 AWG 线缆。',''); return; }
+  if(cursorGroups[tool]) cursorGroups[tool].visible=false;
   tool=i;
-  [...toolbar.children].forEach((s,j)=>s.classList.toggle('active',j===i));
-  document.getElementById('meter').style.display = i===2?'block':'none';
-  if(i!==2){ meterShow('-- --','V AC · 对准测试点按 左键 测量'); }
+  if(cursorGroups[tool]) cursorGroups[tool].visible=true;
+  toolbarSlots.forEach((s,j)=>s.classList.toggle('active',j===i));
+  document.getElementById('meter').style.display=i===2?'block':'none';
+  if(i!==2) meterShow('-- --','V AC · 对准测试点按 左键 测量');
 }
 function meterShow(v,l){ document.getElementById('meter-v').textContent=v; document.getElementById('meter-l').textContent=l; }
 
 // ---------------- 互动注册表 ----------------
 const interactables=[];
-const allMeshes=[];   // 扁平 Mesh 列表，用于高效 raycasting（避免每帧递归遍历场景树）
-function reg(obj3d,opt){ obj3d.traverse(o=>{ if(o.isMesh){ o.userData.ia=opt; }}); interactables.push(obj3d); }
+const allMeshes=[];
+const cursorGroups=[];   // buildCursors() 后填入
+let prevAimed=null;
+
+function reg(obj3d,opt){
+  obj3d.traverse(o=>{ if(o.isMesh){ o.userData.ia=opt; setupGlowMat(o); }});
+  interactables.push(obj3d);
+}
 const raycaster=new THREE.Raycaster(); raycaster.far=3.2;
 const center=new THREE.Vector2(0,0);
-let aimed=null, aimedMeshes=[];
+let aimed=null;
 function pickAim(){
   raycaster.setFromCamera(center,camera);
   const hits=raycaster.intersectObjects(allMeshes,false);
@@ -1048,41 +1252,67 @@ addEventListener('keydown',e=>{
 
 // ---------------- 主循环 ----------------
 const testerTip=document.getElementById('tester-tip');
-const crosshair=document.getElementById('crosshair');
 let started=false;
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),.05);
   movePlayer(dt);
-  // 准星瞄准
+
   if(locked){
-    aimed=pickAim();
+    const newAimed=pickAim();
+    // Hover glow 转换
+    if(newAimed!==prevAimed){
+      if(prevAimed) setHoverGlow(prevAimed,false);
+      if(newAimed) setHoverGlow(newAimed,true);
+      prevAimed=newAimed;
+    }
+    aimed=newAimed;
+
     if(aimed){
       const p=typeof aimed.prompt==='function'? aimed.prompt() : aimed.prompt;
-      if(p){ showPrompt(p); crosshair.classList.add('hot'); }
-      else { hidePrompt(); crosshair.classList.remove('hot'); }
-    }else{ hidePrompt(); crosshair.classList.remove('hot'); }
+      if(p) showPrompt(p); else hidePrompt();
+    }else hidePrompt();
+
+    // 3D 光标热状态：瞄准到可交互物时放大 + 橙色脉冲
+    const hot=!!aimed;
+    if(cursorGroups[tool]){
+      const t=performance.now()*.003;
+      const sc=hot? 1.08+Math.sin(t)*.06 : 1.0;
+      cursorGroups[tool].scale.setScalar(sc);
+    }
+
     // 验电笔实时提示
     if(tool===1){
-      const pt=aimed? aimed.id : null;
+      const pt=aimed?aimed.id:null;
       const known=['panel','j1','j2','outlet'].includes(pt);
       if(known){
         const live=isLive(pt);
         testerTip.className=live?'live':'dead';
         testerTip.textContent=live?'⚡ 带电 LIVE — 小心':'○ 无电 DEAD';
         testerTip.style.display='block';
-      } else testerTip.style.display='none';
-    } else testerTip.style.display='none';
+      }else testerTip.style.display='none';
+    }else testerTip.style.display='none';
+
+    // 光标可见性跟随 locked 状态
+    if(cursorGroups[tool]) cursorGroups[tool].visible=true;
+  }else{
+    if(cursorGroups[tool]) cursorGroups[tool].visible=false;
   }
-  // 检查员小幅呼吸感
+
   if(E.inspector&&E.inspector.visible){ E.inspector.position.y=Math.sin(performance.now()*.0018)*.015; }
   renderer.render(scene,camera);
 }
 
 // ---------------- 启动 ----------------
 buildRoom(); buildDining(); buildKitchen(); buildElectrical(); buildLights();
-scene.traverse(o=>{ if(o.isMesh) allMeshes.push(o); });   // 一次性收集所有 Mesh 供 raycasting 使用
+scene.traverse(o=>{ if(o.isMesh) allMeshes.push(o); });
 registerInteractables();
+// j2cover 不经过 reg()，单独建立 glow
+setupGlowMat(E.j2cover); E.j2cover.userData.ia=E.j2cover.userData.ia; // already set
+// 3D 光标
+const _cg=buildCursors(); cursorGroups.push(..._cg);
+// 工具栏 3D 缩略图（在 buildCursors 之后，renderer 已就绪）
+initToolbar();
 setDiningPower(false); setKitchenPower(false);
 renderSteps(0);
 document.getElementById('start-btn').onclick=()=>{
