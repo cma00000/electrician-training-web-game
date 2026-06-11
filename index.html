@@ -651,24 +651,39 @@ const THUMB_BUILDERS=[
   },
 ];
 
-function makeThumbnail(builderFn, size=68){
+function makeThumbnail(builderFn, size=64){
+  // 用主 renderer + RenderTarget，不创建额外 WebGL context
+  const rt=new THREE.WebGLRenderTarget(size,size);
+  const oScene=new THREE.Scene();
+  oScene.background=new THREE.Color(0x14191e);
+  oScene.add(new THREE.AmbientLight(0x404858,1.0));
+  const d1=new THREE.DirectionalLight(0xffd090,2.4); d1.position.set(2,3,3); oScene.add(d1);
+  const d2=new THREE.DirectionalLight(0x4488bb,0.5); d2.position.set(-2,-1,-1); oScene.add(d2);
+  const obj=builderFn(); oScene.add(obj);
+  obj.updateMatrixWorld(true);
+  const bbox=new THREE.Box3().setFromObject(obj);
+  const bc=new THREE.Vector3(); bbox.getCenter(bc);
+  const bsz=new THREE.Vector3(); bbox.getSize(bsz);
+  const md=Math.max(bsz.x,bsz.y,bsz.z)*0.5;
+  const dist=md/Math.tan(18*Math.PI/180)*1.15;
+  const oCam=new THREE.PerspectiveCamera(36,1,.001,100);
+  oCam.position.set(bc.x+dist*.55, bc.y+dist*.45, bc.z+dist*.75); oCam.lookAt(bc);
+  renderer.setRenderTarget(rt);
+  renderer.render(oScene,oCam);
+  renderer.setRenderTarget(null);
+  // 读像素（WebGL y 轴向上，需翻转）
+  const buf=new Uint8Array(size*size*4);
+  renderer.readRenderTargetPixels(rt,0,0,size,size,buf);
+  rt.dispose();
   const cv=document.createElement('canvas'); cv.width=cv.height=size;
-  try{
-    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
-    r.setClearColor(0,0);
-    const s=new THREE.Scene();
-    s.add(new THREE.AmbientLight(0x505a60,.9));
-    const d1=new THREE.DirectionalLight(0xffd080,2.2); d1.position.set(2,3,4); s.add(d1);
-    const d2=new THREE.DirectionalLight(0x4488cc,.5); d2.position.set(-2,-1,-2); s.add(d2);
-    const obj=builderFn(); s.add(obj);
-    const bbox=new THREE.Box3().setFromObject(obj);
-    const bc=new THREE.Vector3(); bbox.getCenter(bc);
-    const bsz=new THREE.Vector3(); bbox.getSize(bsz);
-    const md=Math.max(bsz.x,bsz.y,bsz.z)*.5;
-    const cam=new THREE.PerspectiveCamera(38,1,.001,100);
-    cam.position.set(bc.x+md*1.4, bc.y+md*1.1, bc.z+md*1.7); cam.lookAt(bc);
-    r.setSize(size,size); r.render(s,cam); r.dispose();
-  }catch(e){}
+  const ctx=cv.getContext('2d');
+  const id=ctx.createImageData(size,size);
+  for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+    const s=((size-1-y)*size+x)*4, d=(y*size+x)*4;
+    id.data[d]=buf[s]; id.data[d+1]=buf[s+1]; id.data[d+2]=buf[s+2]; id.data[d+3]=buf[s+3];
+  }
+  ctx.putImageData(id,0,0);
+  obj.traverse(o=>{ if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); }});
   return cv;
 }
 
@@ -916,7 +931,7 @@ function initToolbar(){
   TOOLS.forEach((t,i)=>{
     const d=document.createElement('div'); d.className='slot'+(i===0?' active':'');
     const keyEl=document.createElement('div'); keyEl.className='key'; keyEl.textContent=`[${t.key}]`;
-    const cv=makeThumbnail(THUMB_BUILDERS[i]); cv.width=64; cv.height=64;
+    const cv=makeThumbnail(THUMB_BUILDERS[i]);
     const nameEl=document.createElement('div'); nameEl.className='name'; nameEl.textContent=t.name;
     d.appendChild(keyEl); d.appendChild(cv); d.appendChild(nameEl);
     d.onclick=()=>setTool(i); toolbar.appendChild(d); toolbarSlots.push(d);
