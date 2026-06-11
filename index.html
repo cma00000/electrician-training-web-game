@@ -903,10 +903,50 @@ const WIRE_PATH = [
 ];
 function addConduit(a,b){
   const len=a.distanceTo(b);
-  const seg=cyl(.025,.025,len,M.conduit,10);
+  const seg=cyl(.032,.032,len,M.conduit,10);
   seg.position.copy(a).lerp(b,.5);
   seg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
   scene.add(seg); allMeshes.push(seg); return seg;
+}
+
+// ── Wire-guide: dashed ghost path + pulsing node beacons ─────────────────
+let wireGuide=null;
+const wireBeacons=[];
+function buildWireGuide(){
+  // Ghost line along the full planned route (draw range updated live)
+  const geo=new THREE.BufferGeometry().setFromPoints(WIRE_PATH);
+  wireGuide=new THREE.Line(geo, new THREE.LineBasicMaterial({
+    color:0xffaa44, transparent:true, opacity:0.55, depthTest:false
+  }));
+  wireGuide.renderOrder=60; wireGuide.visible=false;
+  scene.add(wireGuide);
+  // Pulsing beacons at the 4 connection points
+  [0,3,4,6].forEach(ni=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8),
+      new THREE.MeshBasicMaterial({color:0xff6a00,transparent:true,opacity:0.85,depthTest:false}));
+    m.position.copy(WIRE_PATH[ni]); m.renderOrder=61;
+    m.visible=false; m.userData._ni=ni;
+    scene.add(m); wireBeacons.push(m);
+  });
+}
+function updateWireGuide(){
+  if(!wireGuide) return;
+  const show=G.phase===2 && tool===3;
+  wireGuide.visible=show;
+  if(show){
+    const start=Math.max(0,G.wireNext);
+    wireGuide.geometry.setDrawRange(start, WIRE_PATH.length-start);
+  }
+  const t=performance.now()*.0025;
+  wireBeacons.forEach(m=>{
+    const active=show && m.userData._ni>=G.wireNext;
+    m.visible=active;
+    if(active){
+      const p=0.5+0.5*Math.sin(t*1.6+m.userData._ni*.8);
+      m.material.opacity=0.3+0.65*p;
+      m.scale.setScalar(0.6+0.8*p);
+    }
+  });
 }
 
 // ---------------- 控制：指针锁定 + WASD ----------------
@@ -1094,7 +1134,7 @@ function registerInteractables(){
     }});
   reg(E.panel,{ id:'panel', label:'配电箱 LP-1',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===0? '按 <b>左键</b> 从这里起线' : '';
+      if(G.phase===2 && tool===3) return !G.wireNextStarted? '按 <b>左键</b> 从这里起线' : '';
       if(G.phase===3) return '按 <b>E</b> 安装 30A 断路器并合闸';
       if(G.phase===5 && G.breakerOn) return '按 <b>E</b> 断开断路器（先断电再检修！）';
       if(G.phase===5 && !G.breakerOn && G.faultFixed) return '按 <b>E</b> 重新合闸';
@@ -1127,7 +1167,7 @@ function registerInteractables(){
     }});
   reg(E.j1,{ id:'j1', label:'接线盒 J1',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===3? '按 <b>左键</b> 接入 J1' : (G.wireNext<3?'先从配电箱起线':'');
+      if(G.phase===2 && tool===3){ if(!G.wireNextStarted) return '先从配电箱起线'; if(G.wireNext<3) return '按 <b>左键</b> 接入 J1'; return ''; }
       if(tool===2) return '验电笔检测中…';
       if(tool===2||tool===4) return '';
       return '接线盒 J1';
@@ -1135,7 +1175,7 @@ function registerInteractables(){
     use(){}});
   const j2opt={ id:'j2', label:'接线盒 J2',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===4? '按 <b>左键</b> 接入 J2' : '';
+      if(G.phase===2 && tool===3) return G.wireNext===3? '按 <b>左键</b> 接入 J2' : '';
       if(G.phase===5){
         if(G.breakerOn) return '⚠️ 先回配电箱断电！';
         if(!G.j2Open && tool===4) return '按 <b>E</b> 拆下盖板';
@@ -1159,7 +1199,7 @@ function registerInteractables(){
   reg(E.j2,j2opt); E.j2cover.userData.ia=j2opt;
   reg(E.outlet,{ id:'outlet', label:'设备插座盒',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===6? '按 <b>左键</b> 完成终端接线' : '';
+      if(G.phase===2 && tool===3) return G.wireNext===4? '按 <b>左键</b> 完成终端接线' : '';
       return '油炸锅专用插座 · NEMA 6-30';
     },
     use(){}});
@@ -1348,6 +1388,7 @@ function animate(){
   }
 
   if(E.inspector&&E.inspector.visible){ E.inspector.position.y=Math.sin(performance.now()*.0018)*.015; }
+  updateWireGuide();
   renderer.render(scene,camera);
 }
 
@@ -1355,6 +1396,7 @@ function animate(){
 buildRoom(); buildDining(); buildKitchen(); buildElectrical(); buildLights();
 scene.traverse(o=>{ if(o.isMesh) allMeshes.push(o); });
 registerInteractables();
+buildWireGuide();
 // j2cover 不经过 reg()，单独建立 glow
 setupGlowMat(E.j2cover); E.j2cover.userData.ia=E.j2cover.userData.ia; // already set
 // 3D 光标
