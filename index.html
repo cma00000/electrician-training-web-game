@@ -1374,264 +1374,385 @@ animate();
 (function(){
   const cv = document.getElementById('start-bg');
   const ctx = cv.getContext('2d');
-  let W, H, cx, cy;
+  let W, H, VX, VY;
 
   function resize(){
     W = cv.width  = window.innerWidth;
     H = cv.height = window.innerHeight;
-    cx = W/2; cy = H/2;
+    VX = W * 0.5; VY = H * 0.36; // vanishing point
   }
   window.addEventListener('resize', resize);
   resize();
 
-  // ── Scale helper: world units → canvas px ──────────────────────────────
-  // Game room is roughly 14×12 units; we fit it into ~65% of the smaller dim
-  function scl(){ return Math.min(W,H) * 0.038; }
-
-  // ── Blueprint grid ──────────────────────────────────────────────────────
-  function drawGrid(){
-    const s = scl();
-    const minor = s, major = s * 5;
-    ctx.save();
-    // minor lines
-    ctx.strokeStyle = 'rgba(30,60,100,0.35)';
-    ctx.lineWidth = 0.5;
-    for(let x = (W/2) % minor; x < W; x += minor){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(let y = (H/2) % minor; y < H; y += minor){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    // major lines
-    ctx.strokeStyle = 'rgba(40,90,160,0.5)';
-    ctx.lineWidth = 1;
-    for(let x = (W/2) % major; x < W; x += major){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(let y = (H/2) % major; y < H; y += major){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    ctx.restore();
+  // ── Single-point perspective projection ──────────────────────────────────
+  // px: -1(left)..1(right) in back-wall space
+  // py: -1(ceiling)..1(floor)
+  // depth: 0 = at back wall (far), 1 = near camera
+  function proj(px, py, depth){
+    const sw = 0.28 + 0.34 * depth; // half-width scale
+    const sh = 0.23 + 0.28 * depth; // half-height scale
+    return { x: VX + px * W * sw, y: VY + py * H * sh };
   }
-
-  // ── Floor plan silhouette (world coords, centred on canvas) ────────────
-  // Shapes are approximate game footprints in world units, offset from centre
-  function wp(wx, wy){ const s=scl(); return [cx + wx*s, cy - wy*s]; }
-
-  function drawFloorPlan(){
-    ctx.save();
-    ctx.strokeStyle = 'rgba(50,120,200,0.55)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6,4]);
-
-    // Outer restaurant walls  (≈14 × 12 units)
-    const corners = [[-7,-6],[7,-6],[7,6],[-7,6]];
+  function quad(x1,y1,d1, x2,y2,d2, x3,y3,d3, x4,y4,d4){
+    const a=proj(x1,y1,d1),b=proj(x2,y2,d2),c=proj(x3,y3,d3),d=proj(x4,y4,d4);
     ctx.beginPath();
-    ctx.moveTo(...wp(...corners[0]));
-    for(let i=1;i<corners.length;i++) ctx.lineTo(...wp(...corners[i]));
-    ctx.closePath(); ctx.stroke();
-
-    // Kitchen divider wall
-    ctx.beginPath(); ctx.moveTo(...wp(-7,-1)); ctx.lineTo(...wp(7,-1)); ctx.stroke();
-
-    // Dining tables (4 rectangles)
-    [[-3,3],[0,3],[3,3],[1.5,0.5]].forEach(([tx,ty])=>{
-      const [px,py]=wp(tx,ty); const sw=scl()*.9, sh=scl()*.55;
-      ctx.beginPath(); ctx.rect(px-sw/2, py-sh/2, sw, sh); ctx.stroke();
-    });
-
-    // Kitchen equipment outlines
-    // Counter / service bar
-    const [kx,ky]=wp(-5,-3.5); ctx.beginPath(); ctx.rect(kx, ky, scl()*2.5, scl()*.6); ctx.stroke();
-    // Fryer block
-    const [fx,fy]=wp(4,-4); ctx.beginPath(); ctx.rect(fx-scl()*.4,fy-scl()*.4,scl()*.8,scl()*.8); ctx.stroke();
-    // Electrical panel
-    const [ex,ey]=wp(-6.5,4.5); ctx.beginPath(); ctx.rect(ex,ey,scl()*.7,scl()*1.2); ctx.stroke();
-
-    ctx.restore();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.lineTo(d.x,d.y);
+    ctx.closePath();
   }
 
-  // ── Circuit path definitions ─────────────────────────────────────────────
-  // Each path is an array of [wx,wy] world points
-  const pathC1 = [ [-6.5,4.5],[-5,4.5],[-5,2],[3,2],[3,3],[0,3],[-3,3] ]; // lighting loop
-  const pathC3 = [ [-6.5,4.5],[-6,-1],[-4,-1],[-4,-3.5],[4,-3.5],[4,-4] ]; // power to fryer
+  // ── Animated state ────────────────────────────────────────────────────────
+  const pendant = [1, 1, 1]; // brightness per fixture
+  let kitchenGlow = 1;
+  let arcLife = 0, arcPts = [];
+  let arcCooldown = 90;
 
-  function pathPoints(def){
-    return def.map(p => { const [x,y]=wp(...p); return {x,y}; });
-  }
-
-  // ── Animated dots ────────────────────────────────────────────────────────
-  // Each dot travels along the path using interpolated distance
-  function makeFlowDots(def, count, color){
-    const pts = pathPoints(def);
-    // pre-compute cumulative distances
-    const dists = [0];
-    for(let i=1;i<pts.length;i++){
-      const dx=pts[i].x-pts[i-1].x, dy=pts[i].y-pts[i-1].y;
-      dists.push(dists[i-1]+Math.sqrt(dx*dx+dy*dy));
-    }
-    const total = dists[dists.length-1];
-    const dots = [];
-    for(let i=0;i<count;i++) dots.push({ t: i/count });
-    return { pts, dists, total, dots, color };
-  }
-
-  const flowC1 = makeFlowDots(pathC1, 4, 'rgba(80,160,255,');
-  const flowC3 = makeFlowDots(pathC3, 4, 'rgba(255,120,20,');
-
-  function posOnPath(flow, t){
-    const dist = ((t % 1) + 1) % 1 * flow.total;
-    for(let i=1;i<flow.dists.length;i++){
-      if(flow.dists[i] >= dist){
-        const seg = flow.dists[i] - flow.dists[i-1];
-        const f = (dist - flow.dists[i-1]) / seg;
-        return {
-          x: flow.pts[i-1].x + f*(flow.pts[i].x-flow.pts[i-1].x),
-          y: flow.pts[i-1].y + f*(flow.pts[i].y-flow.pts[i-1].y)
-        };
-      }
-    }
-    return flow.pts[flow.pts.length-1];
-  }
-
-  function drawCircuitPath(def, color, dashed, t){
-    const pts = pathPoints(def);
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash(dashed ? [8,5] : []);
-    ctx.shadowColor = color; ctx.shadowBlur = 6;
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawFlowDots(flow, speed, t){
-    flow.dots.forEach(d => {
-      const pos = posOnPath(flow, d.t + t * speed);
-      const alpha = 0.7 + 0.3 * Math.sin(t * 4 + d.t * 6.28);
-      ctx.save();
-      ctx.shadowColor = flow.color + '1)';
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = flow.color + alpha.toFixed(2)+')';
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, 3.5, 0, 6.28); ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  // ── Pulsing nodes ────────────────────────────────────────────────────────
-  const nodes = [
-    { p: [-6.5,4.5], color: '#ff6a00', label: 'PANEL' },
-    { p: [-4,-1],    color: '#ff6a00', label: 'J-BOX 1' },
-    { p: [-4,-3.5],  color: '#ff6a00', label: 'J-BOX 2' },
-    { p: [4,-4],     color: '#ff6a00', label: 'FRYER' },
-    { p: [-5,2],     color: '#4ca8ff', label: 'C-1' },
-    { p: [3,3],      color: '#4ca8ff', label: 'TABLE' },
-  ];
-
-  function drawNodes(t){
-    nodes.forEach(n => {
-      const [x,y] = wp(...n.p);
-      const pulse = 0.5 + 0.5 * Math.sin(t * 2.5 + n.p[0] + n.p[1]);
-      ctx.save();
-      // outer ring
-      ctx.strokeStyle = n.color;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.3 + 0.3 * pulse;
-      ctx.shadowColor = n.color; ctx.shadowBlur = 16 * pulse;
-      ctx.beginPath(); ctx.arc(x, y, 7 + 4*pulse, 0, 6.28); ctx.stroke();
-      // inner dot
-      ctx.globalAlpha = 0.8 + 0.2 * pulse;
-      ctx.fillStyle = n.color;
-      ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 6.28); ctx.fill();
-      // label
-      ctx.globalAlpha = 0.5 + 0.2 * pulse;
-      ctx.fillStyle = n.color;
-      ctx.font = `bold ${Math.round(scl()*0.38)}px monospace`;
-      ctx.textAlign = 'left';
-      ctx.shadowBlur = 0;
-      ctx.fillText(n.label, x + 10, y + 4);
-      ctx.restore();
-    });
-  }
-
-  // ── Spark particles ──────────────────────────────────────────────────────
-  const sparks = Array.from({length:18}, ()=>({
-    x: Math.random(), y: Math.random(),
-    vx: (Math.random()-.5)*.0005, vy: (Math.random()-.5)*.0005,
-    life: Math.random(), size: 1+Math.random()*2,
-    color: Math.random()<0.5 ? 'rgba(255,106,0,' : 'rgba(80,160,255,'
+  // Dust particles
+  const dust = Array.from({length:40}, ()=>({
+    x: Math.random(), y: Math.random() * 0.85,
+    vx: (Math.random()-.5) * 0.00012, vy: -Math.random() * 0.00008,
+    r: 0.6 + Math.random() * 1.8, a: Math.random() * 0.35 + 0.05
   }));
 
-  function drawSparks(t){
-    sparks.forEach(s => {
-      s.x = (s.x + s.vx + 1) % 1;
-      s.y = (s.y + s.vy + 1) % 1;
-      s.life = (s.life + 0.003) % 1;
-      const alpha = Math.sin(s.life * Math.PI) * 0.7;
-      if(alpha < 0.01) return;
+  function genArc(x1,y1,x2,y2,n){
+    const pts = [{x:x1,y:y1}];
+    for(let i=1;i<n;i++){
+      const t=i/n, mx=x1+(x2-x1)*t, my=y1+(y2-y1)*t;
+      const j=(Math.random()-.5)*14;
+      pts.push({x:mx+j, y:my+j*0.4});
+    }
+    pts.push({x:x2,y:y2});
+    return pts;
+  }
+
+  // ── Layer: base background ────────────────────────────────────────────────
+  function drawBg(){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#010306'); g.addColorStop(0.5,'#04080f'); g.addColorStop(1,'#070b08');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+
+  // ── Layer: room geometry ──────────────────────────────────────────────────
+  function drawRoom(){
+    ctx.save();
+    // Ceiling
+    const ceilG = ctx.createLinearGradient(VX,proj(0,-1,1).y, VX,proj(0,-1,0).y);
+    ceilG.addColorStop(0,'#020508'); ceilG.addColorStop(1,'#07101a');
+    ctx.fillStyle=ceilG;
+    quad(-1,-1,1, 1,-1,1, 1,-1,0, -1,-1,0); ctx.fill();
+
+    // Floor
+    const floorG = ctx.createLinearGradient(VX,proj(0,1,0).y, VX,H);
+    floorG.addColorStop(0,'#0d1418'); floorG.addColorStop(0.5,'#111b22'); floorG.addColorStop(1,'#0a1012');
+    ctx.fillStyle=floorG;
+    quad(-1,1,1, 1,1,1, 1,1,0, -1,1,0); ctx.fill();
+
+    // Floor tiles — perspective grid
+    ctx.strokeStyle='rgba(255,255,255,0.028)'; ctx.lineWidth=0.6;
+    for(let i=0;i<=10;i++){
+      const d=i/10;
+      const l=proj(-1,1,d), r=proj(1,1,d);
+      ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(r.x,r.y); ctx.stroke();
+    }
+    for(let i=-5;i<=5;i++){
+      const bk=proj(i/5,1,0), ft=proj(i/5,1,1);
+      ctx.beginPath(); ctx.moveTo(bk.x,bk.y); ctx.lineTo(ft.x,ft.y); ctx.stroke();
+    }
+
+    // Left wall
+    const lwG = ctx.createLinearGradient(proj(-1,0,1).x,0, proj(-1,0,0).x,0);
+    lwG.addColorStop(0,'#0b141c'); lwG.addColorStop(1,'#050a0e');
+    ctx.fillStyle=lwG;
+    quad(-1,-1,1,-1,1,0, -1,1,0,-1,1,1); ctx.fill();
+
+    // Right wall
+    const rwG = ctx.createLinearGradient(proj(1,0,0).x,0, proj(1,0,1).x,0);
+    rwG.addColorStop(0,'#0a1218'); rwG.addColorStop(1,'#050a0e');
+    ctx.fillStyle=rwG;
+    quad(1,-1,0, 1,-1,1, 1,1,1, 1,1,0); ctx.fill();
+
+    // Back wall
+    ctx.fillStyle='#0e161f';
+    quad(-1,-1,0, 1,-1,0, 1,1,0, -1,1,0); ctx.fill();
+
+    // Wainscot strip on back wall
+    ctx.fillStyle='rgba(30,45,55,0.6)';
+    quad(-1,0.45,0, 1,0.45,0, 1,1,0, -1,1,0); ctx.fill();
+    ctx.strokeStyle='rgba(60,90,110,0.3)'; ctx.lineWidth=1;
+    const wl=proj(-1,0.45,0), wr=proj(1,0.45,0);
+    ctx.beginPath(); ctx.moveTo(wl.x,wl.y); ctx.lineTo(wr.x,wr.y); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ── Layer: kitchen pass-through window ───────────────────────────────────
+  function drawKitchen(t){
+    const ki = kitchenGlow * (0.82 + 0.18*Math.sin(t*6.8));
+    const tl=proj(0.08,-0.25,0.04), tr=proj(0.72,-0.25,0.04);
+    const bl=proj(0.08, 0.42,0.04), br=proj(0.72, 0.42,0.04);
+
+    // Window glow fill
+    ctx.save();
+    ctx.shadowColor=`rgba(255,165,55,${ki*0.9})`; ctx.shadowBlur=50;
+    const wg=ctx.createLinearGradient(tl.x,tl.y, bl.x,bl.y);
+    wg.addColorStop(0,`rgba(255,175,60,${ki*0.55})`);
+    wg.addColorStop(1,`rgba(200,95,15,${ki*0.3})`);
+    ctx.fillStyle=wg;
+    ctx.beginPath();
+    ctx.moveTo(tl.x,tl.y); ctx.lineTo(tr.x,tr.y); ctx.lineTo(br.x,br.y); ctx.lineTo(bl.x,bl.y);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
+
+    // Window frame
+    ctx.strokeStyle=`rgba(120,90,45,0.55)`; ctx.lineWidth=2;
+    ctx.stroke();
+
+    // Horizontal divider bar
+    const ml=proj(0.08, 0.08,0.04), mr=proj(0.72, 0.08,0.04);
+    ctx.strokeStyle=`rgba(130,100,50,0.4)`; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ml.x,ml.y); ctx.lineTo(mr.x,mr.y); ctx.stroke();
+
+    // Light spill on floor from window
+    const mx=(bl.x+br.x)*0.5, my=bl.y;
+    const spread=W*0.18;
+    const lg=ctx.createRadialGradient(mx, my, 0, mx, my+H*0.28, H*0.32);
+    lg.addColorStop(0,`rgba(255,150,45,${ki*0.2})`);
+    lg.addColorStop(1,'rgba(255,140,40,0)');
+    ctx.fillStyle=lg;
+    ctx.beginPath();
+    ctx.moveTo(bl.x,bl.y); ctx.lineTo(br.x,br.y);
+    ctx.lineTo(mx+spread, H*0.96); ctx.lineTo(mx-spread, H*0.96);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Layer: dining tables silhouettes ─────────────────────────────────────
+  function drawTables(){
+    ctx.save();
+    const tables=[
+      {bx:-0.72, bz:0.38, fw:0.22},
+      {bx:-0.05, bz:0.50, fw:0.26},
+      {bx: 0.60, bz:0.35, fw:0.20},
+    ];
+    tables.forEach(tb=>{
+      const tfl=proj(tb.bx-tb.fw, 0.82, tb.bz);
+      const tfr=proj(tb.bx+tb.fw, 0.82, tb.bz);
+      const tbl=proj(tb.bx-tb.fw*0.75, 0.82, tb.bz-0.15);
+      const tbr=proj(tb.bx+tb.fw*0.75, 0.82, tb.bz-0.15);
+      ctx.fillStyle='rgba(16,24,30,0.95)';
+      ctx.strokeStyle='rgba(40,65,78,0.45)'; ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(tfl.x,tfl.y); ctx.lineTo(tfr.x,tfr.y);
+      ctx.lineTo(tbr.x,tbr.y); ctx.lineTo(tbl.x,tbl.y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // Chair hints
+      [-0.6,0,0.6].forEach(off=>{
+        const ch=proj(tb.bx+off*tb.fw*0.8, 0.95, tb.bz+0.04);
+        ctx.fillStyle='rgba(12,18,24,0.8)';
+        ctx.beginPath(); ctx.ellipse(ch.x,ch.y, W*0.012,H*0.008,0,0,Math.PI*2); ctx.fill();
+      });
+    });
+    ctx.restore();
+  }
+
+  // ── Layer: pendant lights ─────────────────────────────────────────────────
+  function drawPendants(t){
+    const fixtures=[
+      {wx:-0.62, wz:0.40},
+      {wx:-0.02, wz:0.52},
+      {wx: 0.58, wz:0.36},
+    ];
+    fixtures.forEach((p,i)=>{
+      const fi=pendant[i]*(0.78+0.22*Math.sin(t*(3.0+i*1.9)));
+      const top=proj(p.wx,-0.72,p.wz);
+      const lamp=proj(p.wx,-0.18,p.wz);
+      const floor=proj(p.wx, 1.0, p.wz);
+      const sh=W*0.022*(1-p.wz*0.25);
+
       ctx.save();
-      ctx.fillStyle = s.color + alpha.toFixed(2)+')';
-      ctx.shadowColor = s.color+'1)'; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.size, 0, 6.28); ctx.fill();
+      // Cord
+      ctx.strokeStyle='rgba(70,85,95,0.55)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(top.x,top.y); ctx.lineTo(lamp.x,lamp.y); ctx.stroke();
+      // Shade
+      ctx.fillStyle='#182028'; ctx.strokeStyle='rgba(80,110,130,0.45)'; ctx.lineWidth=0.8;
+      ctx.beginPath();
+      ctx.moveTo(lamp.x-sh, lamp.y);
+      ctx.lineTo(lamp.x+sh, lamp.y);
+      ctx.lineTo(lamp.x+sh*0.55, lamp.y+sh*0.75);
+      ctx.lineTo(lamp.x-sh*0.55, lamp.y+sh*0.75);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // Bulb
+      ctx.shadowColor=`rgba(255,190,90,${fi})`; ctx.shadowBlur=20;
+      ctx.fillStyle=`rgba(255,210,130,${fi*0.95})`;
+      ctx.beginPath(); ctx.arc(lamp.x, lamp.y+sh*0.38, 2.8, 0, Math.PI*2); ctx.fill();
+      // Cone of light on floor
+      const cw=W*0.16*p.wz;
+      const cg=ctx.createRadialGradient(lamp.x,lamp.y,0, floor.x,floor.y,cw);
+      cg.addColorStop(0,`rgba(255,200,100,${fi*0.28})`);
+      cg.addColorStop(0.5,`rgba(255,160,55,${fi*0.07})`);
+      cg.addColorStop(1,'rgba(255,140,40,0)');
+      ctx.fillStyle=cg;
+      ctx.beginPath();
+      ctx.moveTo(lamp.x-2,lamp.y); ctx.lineTo(lamp.x+2,lamp.y);
+      ctx.lineTo(floor.x+cw, floor.y); ctx.lineTo(floor.x-cw, floor.y);
+      ctx.closePath(); ctx.fill();
       ctx.restore();
     });
   }
 
-  // ── Scanlines ────────────────────────────────────────────────────────────
-  function drawScanlines(){
+  // ── Layer: electrical panel + conduit ────────────────────────────────────
+  function drawPanel(t){
+    const panPt=proj(-0.86,-0.08,0.28);
+    const pw=W*0.052, ph=H*0.155;
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.07)';
-    for(let y=0; y<H; y+=4){ ctx.fillRect(0,y,W,2); }
+    // Body
+    ctx.fillStyle='#1b2530'; ctx.strokeStyle='rgba(70,110,150,0.4)'; ctx.lineWidth=1.5;
+    ctx.fillRect(panPt.x-pw/2, panPt.y-ph/2, pw, ph);
+    ctx.strokeRect(panPt.x-pw/2, panPt.y-ph/2, pw, ph);
+    // Inner door
+    ctx.strokeStyle='rgba(90,140,180,0.2)'; ctx.lineWidth=0.5;
+    ctx.strokeRect(panPt.x-pw/2+2, panPt.y-ph/2+2, pw-4, ph-4);
+    // "LP-1" label
+    ctx.fillStyle='rgba(160,190,210,0.3)';
+    ctx.font=`bold ${Math.max(6,W*0.006)}px monospace`;
+    ctx.textAlign='center';
+    ctx.fillText('LP-1', panPt.x, panPt.y+ph/2-5);
+    // LEDs (4 breakers)
+    const leds=[
+      {oy:-0.52, on:true,  rgb:[255,70,20]},  // C-3 tripped
+      {oy:-0.16, on:true,  rgb:[50,215,100]},
+      {oy: 0.20, on:true,  rgb:[50,215,100]},
+      {oy: 0.56, on:false, rgb:[50,215,100]},
+    ];
+    leds.forEach((led,i)=>{
+      const lx=panPt.x+pw*0.2, ly=panPt.y+led.oy*ph*0.42;
+      const blink=led.on ? (0.55+0.45*Math.sin(t*1.6+i*2.3)) : 0.08;
+      const [r,g,b]=led.rgb;
+      ctx.fillStyle=`rgba(${r},${g},${b},${blink})`;
+      ctx.shadowColor=`rgba(${r},${g},${b},${blink*0.9})`; ctx.shadowBlur=7;
+      ctx.beginPath(); ctx.arc(lx,ly,2.4,0,Math.PI*2); ctx.fill();
+    });
+    // Conduit up to ceiling
+    const conduitX=panPt.x-pw*0.28;
+    const ceilPt=proj(-0.86,-0.92,0.28);
+    ctx.strokeStyle='rgba(195,125,50,0.6)'; ctx.lineWidth=2.8;
+    ctx.shadowColor='rgba(200,130,55,0.45)'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.moveTo(conduitX, panPt.y-ph/2); ctx.lineTo(conduitX, ceilPt.y); ctx.stroke();
+    // Conduit horizontal run along ceiling toward kitchen
+    const runEnd=proj(-0.3,-0.88,0.14);
+    ctx.beginPath(); ctx.moveTo(conduitX, ceilPt.y); ctx.lineTo(runEnd.x, runEnd.y+H*0.01); ctx.stroke();
+    // Junction box 1 on run
+    const jb=proj(-0.52,-0.84,0.20);
+    ctx.fillStyle='rgba(40,65,85,0.9)'; ctx.strokeStyle='rgba(100,150,190,0.35)'; ctx.lineWidth=1;
+    ctx.shadowBlur=0;
+    ctx.fillRect(jb.x-5,jb.y-5,10,10); ctx.strokeRect(jb.x-5,jb.y-5,10,10);
     ctx.restore();
   }
 
-  // ── Vignette ─────────────────────────────────────────────────────────────
-  function drawVignette(){
-    const grad = ctx.createRadialGradient(cx,cy, Math.min(W,H)*.25, cx,cy, Math.max(W,H)*.75);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(4,6,8,0.82)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,W,H);
-  }
-
-  // ── Corner labels ────────────────────────────────────────────────────────
-  function drawLabels(){
+  // ── Layer: fryer station (right corner) ──────────────────────────────────
+  function drawFryer(t){
+    const fp=proj(0.80, 0.55, 0.25);
+    const fw=W*0.06, fh=H*0.12;
     ctx.save();
-    ctx.font = `${Math.round(scl()*0.36)}px monospace`;
-    ctx.fillStyle = 'rgba(50,120,200,0.4)';
-    ctx.textAlign = 'left';
-    ctx.fillText('CIRCUIT C-1 · LIGHTING', 16, H-32);
-    ctx.fillStyle = 'rgba(255,106,0,0.4)';
-    ctx.fillText('CIRCUIT C-3 · POWER', 16, H-16);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(80,120,160,0.35)';
-    ctx.fillText('BAYSIDE ELECTRIC · TRAINING SIM', W-16, H-16);
+    // Steel body
+    ctx.fillStyle='#1a2530'; ctx.strokeStyle='rgba(80,120,150,0.3)'; ctx.lineWidth=1;
+    ctx.fillRect(fp.x-fw/2, fp.y-fh, fw, fh);
+    ctx.strokeRect(fp.x-fw/2, fp.y-fh, fw, fh);
+    // Heat lamp indicator
+    const lit=0.4+0.6*(0.5+0.5*Math.sin(t*2.1));
+    ctx.fillStyle=`rgba(80,255,130,${lit*0.8})`;
+    ctx.shadowColor=`rgba(80,255,130,${lit})`; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(fp.x, fp.y-fh*0.85, 3, 0, Math.PI*2); ctx.fill();
+    // Steam wisps
+    for(let i=0;i<3;i++){
+      const sx=fp.x+(i-1)*fw*0.25;
+      const sy=fp.y-fh-(Math.sin(t*1.3+i)*H*0.02);
+      const sa=0.04+0.03*Math.sin(t*2+i*1.5);
+      const sg=ctx.createRadialGradient(sx,sy,0, sx,sy-H*0.04,H*0.06);
+      sg.addColorStop(0,`rgba(180,200,210,${sa})`);
+      sg.addColorStop(1,'rgba(180,200,210,0)');
+      ctx.fillStyle=sg; ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.ellipse(sx,sy,W*0.012,H*0.04,0,0,Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   }
 
-  // ── Main render loop ─────────────────────────────────────────────────────
-  let startEl = document.getElementById('start');
+  // ── Layer: electric arc ───────────────────────────────────────────────────
+  function drawArc(){
+    arcCooldown--;
+    if(arcCooldown<=0){
+      arcCooldown=80+Math.floor(Math.random()*160);
+      const p=proj(-0.86,-0.08,0.28);
+      arcPts=genArc(p.x+W*0.022, p.y-H*0.025, p.x+W*0.048, p.y+H*0.032, 7);
+      arcLife=10;
+    }
+    if(arcLife>0){
+      arcLife--;
+      const a=arcLife/10;
+      ctx.save();
+      ctx.strokeStyle=`rgba(180,225,255,${a*0.9})`;
+      ctx.shadowColor=`rgba(120,190,255,${a})`; ctx.shadowBlur=14;
+      ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(arcPts[0].x,arcPts[0].y);
+      arcPts.forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ── Layer: floating dust ──────────────────────────────────────────────────
+  function drawDust(){
+    dust.forEach(d=>{
+      d.x=(d.x+d.vx+1)%1; d.y=(d.y+d.vy+1)%1;
+      ctx.save();
+      ctx.fillStyle=`rgba(200,190,165,${d.a*0.45})`;
+      ctx.beginPath(); ctx.arc(d.x*W, d.y*H, d.r, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // ── Layer: vignette + scanlines ───────────────────────────────────────────
+  function drawOverlay(){
+    const vg=ctx.createRadialGradient(W/2,H/2, H*0.12, W/2,H/2, H*0.82);
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(0.55,'rgba(0,0,0,0.28)');
+    vg.addColorStop(1,'rgba(0,0,0,0.90)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+    // scanlines
+    ctx.fillStyle='rgba(0,0,0,0.055)';
+    for(let y=0;y<H;y+=3) ctx.fillRect(0,y,W,1.5);
+  }
+
+  // ── Flicker updates ───────────────────────────────────────────────────────
+  function updateFlicker(){
+    if(Math.random()<0.004) pendant[Math.floor(Math.random()*3)]=0.15;
+    for(let i=0;i<3;i++) pendant[i]=Math.min(1,pendant[i]+0.09);
+    if(Math.random()<0.001) kitchenGlow=0.5;
+    kitchenGlow=Math.min(1,kitchenGlow+0.04);
+  }
+
+  // ── Main loop ─────────────────────────────────────────────────────────────
+  const startEl=document.getElementById('start');
   let animId;
   function frame(ts){
-    if(!startEl || startEl.style.display==='none'){ return; }
-    const t = ts * 0.001;
+    if(!startEl||startEl.style.display==='none') return;
+    const t=ts*0.001;
+    updateFlicker();
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = '#080b0e';
-    ctx.fillRect(0,0,W,H);
-
-    drawGrid();
-    drawFloorPlan();
-    drawCircuitPath(pathC1, 'rgba(60,130,255,0.55)', true,  t);
-    drawCircuitPath(pathC3, 'rgba(255,100,10,0.65)', false, t);
-    drawFlowDots(flowC1, 0.04, t);
-    drawFlowDots(flowC3, 0.06, t);
-    drawNodes(t);
-    drawSparks(t);
-    drawScanlines();
-    drawVignette();
-    drawLabels();
-
-    animId = requestAnimationFrame(frame);
+    drawBg();
+    drawRoom();
+    drawKitchen(t);
+    drawTables();
+    drawPendants(t);
+    drawPanel(t);
+    drawFryer(t);
+    drawArc();
+    drawDust();
+    drawOverlay();
+    animId=requestAnimationFrame(frame);
   }
-  animId = requestAnimationFrame(frame);
+  animId=requestAnimationFrame(frame);
 
-  // Stop animating once game starts to save GPU
-  document.getElementById('start-btn').addEventListener('click', ()=>{
+  document.getElementById('start-btn').addEventListener('click',()=>{
     cancelAnimationFrame(animId);
   });
 })();
