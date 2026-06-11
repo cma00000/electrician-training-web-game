@@ -1287,6 +1287,7 @@ en:{
   fb_i3_ok:"EGC = <b>green or bare copper</b>. White is the grounded neutral — don't confuse them.",
   fb_i3_no:'White is for the neutral; black/red are hots. See <a onclick="openBookChapter(0)">Ch.1</a>.',
 }};
+let _lang = 'zh';
 function T(k){ return (STRINGS[_lang]||STRINGS.zh)[k]; }
 function registerInteractables(){
   reg(E.bpRoll,{ id:'bp', label:'电气图纸 E-101',
@@ -1587,7 +1588,6 @@ const LANG_DATA = {
     note: 'Requires keyboard & mouse. Desktop browser only.',
   }
 };
-let _lang = 'zh';
 
 function applyGameLang(){
   // Static DOM elements
