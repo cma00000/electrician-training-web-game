@@ -241,12 +241,12 @@
 <!-- ===== 图纸 ===== -->
 <div class="modal-wrap" id="bp">
   <div class="modal">
-    <div class="mhead"><h2>📐 电气平面图 · E-101 · 海湾小馆</h2><button class="mx" data-close="bp">关闭 [Esc]</button></div>
+    <div class="mhead"><h2 id="bp-title">📐 电气平面图 · E-101 · 海湾小馆</h2><button class="mx" id="bp-close" data-close="bp">关闭 [Esc]</button></div>
     <div class="mbody">
       <div id="bp-svg-wrap"><!-- SVG 注入 --></div>
-      <div class="bp-note">SHEET E-101 · SCALE NTS · PANEL "LP-1" 120/240V 1Φ 3W · 本图为训练用简化图</div>
+      <div class="bp-note" id="bp-note">SHEET E-101 · SCALE NTS · PANEL "LP-1" 120/240V 1Φ 3W · 本图为训练用简化图</div>
       <div class="q" id="bp-q">
-        <div class="qt"><span class="qtag">考点 · 专用回路</span>根据图例与 NEC 要求，新装的 5kW 商用油炸锅应当接入哪条回路？</div>
+        <div class="qt"><span class="qtag" id="bp-qtag">考点 · 专用回路</span><span id="bp-qtext">根据图例与 NEC 要求，新装的 5kW 商用油炸锅应当接入哪条回路？</span></div>
         <div class="opts">
           <div class="opt" data-q="bp" data-v="0">C-1 · 照明回路（与吊灯共用）</div>
           <div class="opt" data-q="bp" data-v="1">C-2 · 用餐区普通插座回路</div>
@@ -263,7 +263,7 @@
 <!-- ===== 负载计算 ===== -->
 <div class="modal-wrap" id="calc">
   <div class="modal">
-    <div class="mhead"><h2>⚡ 负载计算 · 油炸锅专用回路</h2><button class="mx" data-close="calc">关闭 [Esc]</button></div>
+    <div class="mhead"><h2 id="calc-title">⚡ 负载计算 · 油炸锅专用回路</h2><button class="mx" id="calc-close" data-close="calc">关闭 [Esc]</button></div>
     <div class="mbody">
       <div class="nameplate">
         COMMERCIAL DEEP FRYER · MODEL FRY-5000<br>
@@ -271,7 +271,7 @@
         CONTINUOUS DUTY（连续负载）
       </div>
       <div class="q" id="calc-q1">
-        <div class="qt"><span class="qtag">第 1 步 · 电流</span>这台油炸锅的满载电流约为多少？（I = P ÷ V）</div>
+        <div class="qt"><span class="qtag" id="c1-qtag">第 1 步 · 电流</span><span id="c1-qtext">这台油炸锅的满载电流约为多少？（I = P ÷ V）</span></div>
         <div class="opts">
           <div class="opt" data-q="c1" data-v="0">12.5 A</div>
           <div class="opt" data-q="c1" data-v="1">20.8 A</div>
@@ -281,7 +281,7 @@
         <div class="fb" id="c1-fb"></div>
       </div>
       <div class="q" id="calc-q2" style="display:none">
-        <div class="qt"><span class="qtag">第 2 步 · 断路器</span>铭牌标注为<b>连续负载</b>。按 NEC 125% 规则（20.8 × 1.25 ≈ 26A），应选多大的断路器？</div>
+        <div class="qt"><span class="qtag" id="c2-qtag">第 2 步 · 断路器</span><span id="c2-qtext">铭牌标注为<b>连续负载</b>。按 NEC 125% 规则（20.8 × 1.25 ≈ 26A），应选多大的断路器？</span></div>
         <div class="opts">
           <div class="opt" data-q="c2" data-v="0">20 A</div>
           <div class="opt" data-q="c2" data-v="1">25 A</div>
@@ -291,7 +291,7 @@
         <div class="fb" id="c2-fb"></div>
       </div>
       <div class="q" id="calc-q3" style="display:none">
-        <div class="qt"><span class="qtag">第 3 步 · 线规</span>30A 断路器配铜导线（75°C 端子，简化表），应选哪种线规？</div>
+        <div class="qt"><span class="qtag" id="c3-qtag">第 3 步 · 线规</span><span id="c3-qtext">30A 断路器配铜导线（75°C 端子，简化表），应选哪种线规？</span></div>
         <div class="opts">
           <div class="opt" data-q="c3" data-v="0">14 AWG（15A）</div>
           <div class="opt" data-q="c3" data-v="1">12 AWG（20A）</div>
@@ -308,12 +308,12 @@
 <!-- ===== 教材 ===== -->
 <div class="modal-wrap" id="book">
   <div class="modal">
-    <div class="mhead"><h2>📕 C-10 学徒手册（随身教材）</h2><button class="mx" data-close="book">关闭 [Esc / B]</button></div>
+    <div class="mhead"><h2 id="book-title">📕 C-10 学徒手册（随身教材）</h2><button class="mx" id="book-close" data-close="book">关闭 [Esc / B]</button></div>
     <div class="book-tabs" id="book-tabs">
-      <button data-ch="0" class="on">① 电路基础</button>
-      <button data-ch="1">② 负载计算</button>
-      <button data-ch="2">③ NEC 要点</button>
-      <button data-ch="3">④ 故障排查</button>
+      <button data-ch="0" id="book-tab-0" class="on">① 电路基础</button>
+      <button data-ch="1" id="book-tab-1">② 负载计算</button>
+      <button data-ch="2" id="book-tab-2">③ NEC 要点</button>
+      <button data-ch="3" id="book-tab-3">④ 故障排查</button>
     </div>
     <div class="mbody">
       <div class="chapter on" id="ch0">
@@ -355,11 +355,11 @@
 <!-- ===== 验收 ===== -->
 <div class="modal-wrap" id="insp">
   <div class="modal">
-    <div class="mhead"><h2>🪪 竣工验收 · 检查员 Rodriguez</h2><button class="mx" data-close="insp">关闭 [Esc]</button></div>
+    <div class="mhead"><h2 id="insp-title">🪪 竣工验收 · 检查员 Rodriguez</h2><button class="mx" id="insp-close" data-close="insp">关闭 [Esc]</button></div>
     <div class="mbody">
-      <p style="font-size:13.5px;color:var(--txt-dim);line-height:1.7">「活儿干得不错，小伙子。不过签字之前，按惯例考你三个问题——答错也没关系，翻你的小红书去（按 B）。」</p>
+      <p id="insp-intro" style="font-size:13.5px;color:var(--txt-dim);line-height:1.7">「活儿干得不错，小伙子。不过签字之前，按惯例考你三个问题——答错也没关系，翻你的小红书去（按 B）。」</p>
       <div class="q">
-        <div class="qt"><span class="qtag">NEC 210.8(B)</span>商用厨房里的 125V 15/20A 插座，需要哪种保护？</div>
+        <div class="qt"><span class="qtag" id="i1-qtag">NEC 210.8(B)</span><span id="i1-qtext">商用厨房里的 125V 15/20A 插座，需要哪种保护？</span></div>
         <div class="opts">
           <div class="opt" data-q="i1" data-v="0">AFCI 电弧故障保护</div>
           <div class="opt" data-q="i1" data-v="1">GFCI 接地故障保护</div>
@@ -369,7 +369,7 @@
         <div class="fb" id="i1-fb"></div>
       </div>
       <div class="q">
-        <div class="qt"><span class="qtag">NEC 210.20</span>断路器上的连续负载，不应超过其额定值的——</div>
+        <div class="qt"><span class="qtag" id="i2-qtag">NEC 210.20</span><span id="i2-qtext">断路器上的连续负载，不应超过其额定值的——</span></div>
         <div class="opts">
           <div class="opt" data-q="i2" data-v="0">100%</div>
           <div class="opt" data-q="i2" data-v="1">90%</div>
@@ -379,7 +379,7 @@
         <div class="fb" id="i2-fb"></div>
       </div>
       <div class="q">
-        <div class="qt"><span class="qtag">导线识别</span>设备接地导体（EGC）的颜色应为——</div>
+        <div class="qt"><span class="qtag" id="i3-qtag">导线识别</span><span id="i3-qtext">设备接地导体（EGC）的颜色应为——</span></div>
         <div class="opts">
           <div class="opt" data-q="i3" data-v="0">白色</div>
           <div class="opt" data-q="i3" data-v="1">黑色</div>
@@ -398,22 +398,22 @@
   <div class="modal">
     <div class="mbody">
       <div class="seal">⚡</div>
-      <h2>验 收 通 过</h2>
-      <div class="sub">CSLB · C-10 TRAINING MODULE 01 · COMPLETE</div>
-      <p style="font-size:13.5px;line-height:1.7;color:#4a443a">海湾小馆油炸锅专用回路：通电正常，验收签字。本关覆盖的 C-10 考点已计入你的能力档案：</p>
+      <h2 id="cert-h2">验 收 通 过</h2>
+      <div class="sub" id="cert-sub">CSLB · C-10 TRAINING MODULE 01 · COMPLETE</div>
+      <p id="cert-p" style="font-size:13.5px;line-height:1.7;color:#4a443a">海湾小馆油炸锅专用回路：通电正常，验收签字。本关覆盖的 C-10 考点已计入你的能力档案：</p>
       <ul>
-        <li>📐 图纸阅读 · 专用回路识别</li>
-        <li>⚡ 负载计算 · I=P/V · 125% 连续负载规则</li>
-        <li>🔌 导线载流量匹配（NEC 310.16）</li>
-        <li>🔍 分段电压排障法</li>
-        <li>🪪 GFCI / 80% 规则 / 导线颜色（验收口试）</li>
+        <li id="cert-li0">📐 图纸阅读 · 专用回路识别</li>
+        <li id="cert-li1">⚡ 负载计算 · I=P/V · 125% 连续负载规则</li>
+        <li id="cert-li2">🔌 导线载流量匹配（NEC 310.16）</li>
+        <li id="cert-li3">🔍 分段电压排障法</li>
+        <li id="cert-li4">🪪 GFCI / 80% 规则 / 导线颜色（验收口试）</li>
       </ul>
       <div class="stats">
-        <div><b id="stat-time">--:--</b>用时</div>
-        <div><b id="stat-miss">0</b>答错次数</div>
-        <div><b id="stat-book">0</b>翻教材次数</div>
+        <div><b id="stat-time">--:--</b><span id="stat-time-lbl">用时</span></div>
+        <div><b id="stat-miss">0</b><span id="stat-miss-lbl">答错次数</span></div>
+        <div><b id="stat-book">0</b><span id="stat-book-lbl">翻教材次数</span></div>
       </div>
-      <button class="mbtn" data-close="cert">继续在餐厅里逛逛</button>
+      <button class="mbtn" id="cert-btn" data-close="cert">继续在餐厅里逛逛</button>
     </div>
   </div>
 </div>
@@ -1152,6 +1152,54 @@ zh:{
   mat_tag:'材料齐了',mat:'10 AWG 铜线 ×3 + 30A 双极断路器已领取。装备线缆工具，从配电箱（西墙）开始，依次点击：配电箱 → J1 → J2 → 插座。',mat_ref:'考点：125% 规则 / NEC 310.16',
   see_draw_tag:'先看图纸',see_draw:'师傅说：动手之前先动眼。去吧台展开 E-101。',
   bp_done_tag:'考点入档 · 专用回路',bp_done:'图纸阅读完成。下一步：去厨房东侧的油炸锅看铭牌。',bp_done_ref:'C-10 笔试：图例识别 / 回路规划',
+  // -- modal content --
+  bp_title:'📐 电气平面图 · E-101 · 海湾小馆',bp_close:'关闭 [Esc]',
+  bp_note:'SHEET E-101 · SCALE NTS · PANEL "LP-1" 120/240V 1Φ 3W · 本图为训练用简化图',
+  bp_qtag:'考点 · 专用回路',bp_qtext:'根据图例与 NEC 要求，新装的 5kW 商用油炸锅应当接入哪条回路？',
+  bp_opts:['C-1 · 照明回路（与吊灯共用）','C-2 · 用餐区普通插座回路','C-3 · 厨房设备专用回路（新增）','随便哪条，只要电压对就行'],
+  bp_done_btn:'明白了，去看设备铭牌 →',
+  calc_title:'⚡ 负载计算 · 油炸锅专用回路',calc_close:'关闭 [Esc]',
+  c1_qtag:'第 1 步 · 电流',c1_qtext:'这台油炸锅的满载电流约为多少？（I = P ÷ V）',
+  c1_opts:['12.5 A','20.8 A','41.7 A','5.0 A'],
+  c2_qtag:'第 2 步 · 断路器',c2_qtext:'铭牌标注为<b>连续负载</b>。按 NEC 125% 规则（20.8 × 1.25 ≈ 26A），应选多大的断路器？',
+  c2_opts:['20 A','25 A','30 A','50 A'],
+  c3_qtag:'第 3 步 · 线规',c3_qtext:'30A 断路器配铜导线（75°C 端子，简化表），应选哪种线规？',
+  c3_opts:['14 AWG（15A）','12 AWG（20A）','10 AWG（30A）','8 AWG（40A）'],
+  calc_done_btn:'领取材料：10 AWG 线缆 + 30A 断路器 →',
+  book_title:'📕 C-10 学徒手册（随身教材）',book_close:'关闭 [Esc / B]',
+  book_tabs:['① 电路基础','② 负载计算','③ NEC 要点','④ 故障排查'],
+  ch0_html:`<h3>火线 / 零线 / 地线</h3><p>北美住宅与轻型商业：<b>Hot（黑/红）</b>带电送出，<b>Neutral（白）</b>回流，<b>Ground（绿/裸）</b>仅作故障保护通路，正常情况下不载流。240V 单相设备使用两根火线（L1-L2），相间电压 240V。</p><div class="kp">考题常以导线颜色与功能配对的形式出现：设备接地导体（EGC）= 绿色或裸铜，接地中性线（Grounded Conductor）= 白色/灰色。</div><h3>断路器的作用</h3><p>断路器保护的是<b>导线</b>不过载，不是保护电器。导线允许载流量必须 ≥ 断路器额定值。</p>`,
+  ch1_html:`<h3>三步走</h3><p>① 求电流：<span class="formula">I = P ÷ V</span>　② 连续负载（持续 ≥3 小时）按 <span class="formula">I × 125%</span> 选保护；等价说法：断路器持续负载不得超过额定值的 <b>80%</b>。　③ 按断路器选不小于其额定的导线。</p><h3>常用铜导线载流量（75°C 简化）</h3><table><tr><th>线规</th><td>14 AWG</td><td>12 AWG</td><td>10 AWG</td><td>8 AWG</td><td>6 AWG</td></tr><tr><th>载流量</th><td>15 A</td><td>20 A</td><td>30 A</td><td>50 A</td><td>65 A</td></tr></table><div class="kp">本工单示例：5000W ÷ 240V ≈ 20.8A → ×1.25 ≈ 26A → 取标准规格 30A 断路器 → 配 10 AWG 铜线。计算题是 C-10 笔试占比最高的题型。</div>`,
+  ch2_html:`<h3>商用厨房 GFCI</h3><p>NEC 210.8(B)：商用厨房内 125V 15/20A 插座必须有 <b>GFCI</b>（接地故障断路器）保护——水与电共存的区域，人身保护优先。</p><h3>专用回路（Individual Branch Circuit)</h3><p>固定安装的大功率厨房设备（油炸锅、烤箱等）应使用专用回路，不与照明或普通插座共用，避免互相影响并便于检修隔离。</p><h3>80% / 125% 规则</h3><p>NEC 210.19 / 210.20：连续负载下导线与过流保护均按 125% 取值。</p><div class="kp">验收检查（Inspection）类考题常考：GFCI 适用场所、回路是否专用、导线-断路器匹配。违规 = Fail Inspection = 返工。</div>`,
+  ch3_html:`<h3>分段电压测量法</h3><p>从电源侧向负载侧逐点测电压：配电箱 → 接线盒 J1 → 接线盒 J2 → 设备端。<b>电压「消失」的那一段</b>就是故障区间——常见原因：接头松动、断线、端子氧化。</p><p>例：配电箱 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ 故障在 J1 与 J2 之间（多为 J2 进线端子松动）。</p><div class="kp">排障题在 C-10 实务部分常以「给读数、判位置」的形式出现。记住口诀：<b>有压到哪里，故障在下一段。</b></div><h3>安全第一</h3><p>带电测量使用万用表；紧固端子前必须断开断路器并验电确认无电（Lockout/Tagout 思想）。</p>`,
+  insp_title:'🪪 竣工验收 · 检查员 Rodriguez',insp_close:'关闭 [Esc]',
+  insp_intro:'「活儿干得不错，小伙子。不过签字之前，按惯例考你三个问题——答错也没关系，翻你的小红书去（按 B）。」',
+  i1_qtag:'NEC 210.8(B)',i1_qtext:'商用厨房里的 125V 15/20A 插座，需要哪种保护？',
+  i1_opts:['AFCI 电弧故障保护','GFCI 接地故障保护','不需要额外保护','防雷击浪涌保护'],
+  i2_qtag:'NEC 210.20',i2_qtext:'断路器上的连续负载，不应超过其额定值的——',
+  i2_opts:['100%','90%','80%','50%'],
+  i3_qtag:'导线识别',i3_qtext:'设备接地导体（EGC）的颜色应为——',
+  i3_opts:['白色','黑色','红色','绿色或裸铜'],
+  insp_done_btn:'提交验收 →',
+  cert_h2:'验 收 通 过',cert_sub:'CSLB · C-10 TRAINING MODULE 01 · COMPLETE',
+  cert_p:'海湾小馆油炸锅专用回路：通电正常，验收签字。本关覆盖的 C-10 考点已计入你的能力档案：',
+  cert_lis:['📐 图纸阅读 · 专用回路识别','⚡ 负载计算 · I=P/V · 125% 连续负载规则','🔌 导线载流量匹配（NEC 310.16）','🔍 分段电压排障法','🪪 GFCI / 80% 规则 / 导线颜色（验收口试）'],
+  stat_time_lbl:'用时',stat_miss_lbl:'答错次数',stat_book_lbl:'翻教材次数',
+  cert_btn:'继续在餐厅里逛逛',
+  fb_bp_ok:'正确。大功率固定厨房设备必须走<b>专用回路（Individual Branch Circuit）</b>，不与照明、插座共用。本工单即新增 C-3。',
+  fb_bp_no:'再想想——油炸锅 5kW，与照明或普通插座共用会怎样？翻教材 <a onclick="openBookChapter(2)">第③章 · 专用回路</a>。',
+  fb_c1_ok:'I = 5000W ÷ 240V ≈ <b>20.8A</b>。',
+  fb_c1_no:'用 I = P ÷ V。功率 5000W，电压 240V。见 <a onclick="openBookChapter(1)">第②章</a>。',
+  fb_c2_ok:'连续负载 ×125%：20.8 × 1.25 ≈ 26A → 取不小于 26A 的标准规格 = <b>30A</b>。',
+  fb_c2_no:'连续负载（≥3小时）必须按 125% 取保护值，再向上取标准规格。见 <a onclick="openBookChapter(1)">第②章</a>。',
+  fb_c3_ok:'30A 断路器 → 铜线 <b>10 AWG</b>（载流量 30A）。导线载流量必须 ≥ 断路器额定。',
+  fb_c3_no:'断路器保护的是导线：导线载流量 ≥ 30A 才行。查 <a onclick="openBookChapter(1)">第②章载流量表</a>。',
+  fb_i1_ok:'NEC 210.8(B)：商用厨房 125V 15/20A 插座必须 <b>GFCI</b> 保护。',
+  fb_i1_no:'水电共存区域，保护的是「人」。见 <a onclick="openBookChapter(2)">第③章</a>。',
+  fb_i2_ok:'<b>80%</b>——与 125% 规则互为倒数表述。',
+  fb_i2_no:'提示：125% 规则换个说法。见 <a onclick="openBookChapter(2)">第③章</a>。',
+  fb_i3_ok:'EGC = <b>绿色或裸铜</b>。白色是接地中性线，别混。',
+  fb_i3_no:'白色留给中性线，黑/红是火线。见 <a onclick="openBookChapter(0)">第①章</a>。',
 },
 en:{
   tools:['Hand','Volt Tester','Multimeter','Wire','Screwdriver'],
@@ -1190,6 +1238,54 @@ en:{
   mat_tag:'Materials Ready',mat:'10 AWG copper ×3 + 30A 2-pole breaker claimed. Equip the Wire tool, start at the panel (west wall): Panel → J1 → J2 → Outlet.',mat_ref:'Key: 125% rule / NEC 310.16',
   see_draw_tag:'Plans First',see_draw:"Mentor says: eyes before hands. Head to the counter and open E-101.",
   bp_done_tag:'Exam Point · Dedicated Circuit',bp_done:'Plan reading complete. Next: check the fryer nameplate in the kitchen.',bp_done_ref:'C-10 written: symbol reading / circuit planning',
+  // -- modal content --
+  bp_title:'📐 Electrical Plan · E-101 · Bayside Bistro',bp_close:'Close [Esc]',
+  bp_note:'SHEET E-101 · SCALE NTS · PANEL "LP-1" 120/240V 1\u03a6 3W · Training use — simplified diagram',
+  bp_qtag:'Exam Point · Dedicated Circuit',bp_qtext:'Per the legend and NEC requirements, which circuit should the new 5kW commercial fryer connect to?',
+  bp_opts:['C-1 · Lighting circuit (shared with pendant lights)','C-2 · Dining-area general receptacle circuit','C-3 · Kitchen equipment dedicated circuit (new)','Any circuit — as long as the voltage matches'],
+  bp_done_btn:'Got it — go check the nameplate \u2192',
+  calc_title:'\u26a1 Load Calculation · Fryer Dedicated Circuit',calc_close:'Close [Esc]',
+  c1_qtag:'Step 1 · Current',c1_qtext:'What is the full-load current of this fryer? (I = P \u00f7 V)',
+  c1_opts:['12.5 A','20.8 A','41.7 A','5.0 A'],
+  c2_qtag:'Step 2 · Breaker',c2_qtext:'The nameplate shows <b>Continuous Duty</b>. Applying the NEC 125% rule (20.8 × 1.25 ≈ 26A), what size breaker is required?',
+  c2_opts:['20 A','25 A','30 A','50 A'],
+  c3_qtag:'Step 3 · Wire Gauge',c3_qtext:'For a 30A breaker with copper conductors (75°C terminals, simplified table), which wire gauge is required?',
+  c3_opts:['14 AWG (15A)','12 AWG (20A)','10 AWG (30A)','8 AWG (40A)'],
+  calc_done_btn:'Claim materials: 10 AWG wire + 30A breaker \u2192',
+  book_title:'\ud83d\udcd5 C-10 Apprentice Manual (Field Reference)',book_close:'Close [Esc / B]',
+  book_tabs:['\u2460 Circuit Basics','\u2461 Load Calc','\u2462 NEC Key Points','\u2463 Troubleshooting'],
+  ch0_html:`<h3>Hot / Neutral / Ground</h3><p>North American residential and light commercial: <b>Hot (black/red)</b> carries current out, <b>Neutral (white)</b> returns it, <b>Ground (green/bare)</b> is a fault-protection path only — no current under normal conditions. 240V single-phase equipment uses two hots (L1-L2) at 240V phase-to-phase.</p><div class="kp">Exam questions often pair wire colors with functions: Equipment Grounding Conductor (EGC) = green or bare copper; Grounded Conductor (neutral) = white or gray.</div><h3>What Breakers Protect</h3><p>A breaker protects the <b>wire</b> from overload — not the appliance. The wire's ampacity must be ≥ the breaker's rating.</p>`,
+  ch1_html:`<h3>Three-Step Process</h3><p>① Find current: <span class="formula">I = P ÷ V</span>&nbsp;&nbsp;② Continuous load (≥3 h): apply <span class="formula">I × 125%</span> for protection — equivalent: a breaker must not carry more than <b>80%</b> of its rating continuously.&nbsp;&nbsp;③ Choose wire rated ≥ breaker amperage.</p><h3>Copper Wire Ampacity (75°C, simplified)</h3><table><tr><th>Gauge</th><td>14 AWG</td><td>12 AWG</td><td>10 AWG</td><td>8 AWG</td><td>6 AWG</td></tr><tr><th>Ampacity</th><td>15 A</td><td>20 A</td><td>30 A</td><td>50 A</td><td>65 A</td></tr></table><div class="kp">This job: 5000W ÷ 240V ≈ 20.8A → ×1.25 ≈ 26A → next standard size = 30A breaker → use 10 AWG copper. Load-calc questions are the highest-weighted section of the C-10 written exam.</div>`,
+  ch2_html:`<h3>Commercial Kitchen GFCI</h3><p>NEC 210.8(B): 125V 15/20A receptacles in commercial kitchens must have <b>GFCI</b> (Ground-Fault Circuit-Interrupter) protection — where water and electricity coexist, personal protection comes first.</p><h3>Individual Branch Circuit</h3><p>Fixed large-draw kitchen equipment (fryers, ovens, etc.) must be on a dedicated circuit — not shared with lighting or general receptacles — to prevent interference and simplify isolation.</p><h3>80% / 125% Rule</h3><p>NEC 210.19 / 210.20: For continuous loads, conductors and overcurrent protection are both sized at 125% of the load.</p><div class="kp">Inspection exam questions often test: GFCI application, dedicated vs. shared circuit, conductor-breaker matching. A violation = Fail Inspection = rework.</div>`,
+  ch3_html:`<h3>Voltage-Drop Method</h3><p>Test voltage from source toward load: Panel → J1 → J2 → Equipment. <b>Where voltage disappears</b> is the fault interval — common causes: loose terminal, broken wire, oxidized connection.</p><p>Example: Panel 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ Fault is in the J1–J2 segment (likely J2 inlet terminal loose).</p><div class="kp">Troubleshooting questions give you meter readings and ask you to locate the fault. Rule: <b>voltage present up to the fault, zero after it.</b></div><h3>Safety First</h3><p>Use a multimeter for live measurements. Always open the breaker and verify dead (Lockout/Tagout) before tightening terminals.</p>`,
+  insp_title:'\ud83e\udeb6 Final Inspection · Inspector Rodriguez',insp_close:'Close [Esc]',
+  insp_intro:'"Good work, kid. Before I sign off — three quick questions. Wrong answers are fine, just check your manual (press B)."',
+  i1_qtag:'NEC 210.8(B)',i1_qtext:'What protection is required for 125V 15/20A receptacles in a commercial kitchen?',
+  i1_opts:['AFCI arc-fault protection','GFCI ground-fault protection','No additional protection required','Surge / lightning protection'],
+  i2_qtag:'NEC 210.20',i2_qtext:'Continuous load on a breaker must not exceed what percentage of its rating?',
+  i2_opts:['100%','90%','80%','50%'],
+  i3_qtag:'Wire ID',i3_qtext:'The Equipment Grounding Conductor (EGC) must be what color?',
+  i3_opts:['White','Black','Red','Green or bare copper'],
+  insp_done_btn:'Submit Inspection \u2192',
+  cert_h2:'INSPECTION PASSED',cert_sub:'CSLB · C-10 TRAINING MODULE 01 · COMPLETE',
+  cert_p:'Bayside Bistro fryer dedicated circuit: energized and signed off. C-10 exam topics covered in this module:',
+  cert_lis:['\ud83d\udcd0 Blueprint reading · dedicated circuit ID','\u26a1 Load calculation · I=P/V · 125% continuous-load rule','\ud83d\udd0c Conductor ampacity matching (NEC 310.16)','\ud83d\udd0d Voltage-drop troubleshooting method','\ud83e\udeb6 GFCI / 80% rule / wire color ID (inspection quiz)'],
+  stat_time_lbl:' time',stat_miss_lbl:' wrong answers',stat_book_lbl:' manual opens',
+  cert_btn:'Keep exploring the restaurant',
+  fb_bp_ok:'Correct. High-draw fixed kitchen equipment must be on an <b>Individual Branch Circuit</b> — never shared with lighting or receptacles. This job adds C-3.',
+  fb_bp_no:'Think again — the fryer draws 5kW. What happens when that shares a lighting circuit? See <a onclick="openBookChapter(2)">Ch.3 · Dedicated Circuits</a>.',
+  fb_c1_ok:'I = 5000W ÷ 240V ≈ <b>20.8A</b>.',
+  fb_c1_no:'Use I = P ÷ V. Power is 5000W, voltage is 240V. See <a onclick="openBookChapter(1)">Ch.2</a>.',
+  fb_c2_ok:'Continuous load ×125%: 20.8 × 1.25 ≈ 26A → next standard size ≥ 26A = <b>30A</b>.',
+  fb_c2_no:'Continuous loads (≥3 h) require 125% overcurrent protection, rounded up to next standard size. See <a onclick="openBookChapter(1)">Ch.2</a>.',
+  fb_c3_ok:'30A breaker → copper wire <b>10 AWG</b> (ampacity 30A). Conductor ampacity must be ≥ breaker rating.',
+  fb_c3_no:'The breaker protects the wire: conductor ampacity must be ≥ 30A. Check <a onclick="openBookChapter(1)">Ch.2 ampacity table</a>.',
+  fb_i1_ok:'NEC 210.8(B): Commercial kitchen 125V 15/20A receptacles require <b>GFCI</b> protection.',
+  fb_i1_no:'Where water and electricity coexist, protect people. See <a onclick="openBookChapter(2)">Ch.3</a>.',
+  fb_i2_ok:'<b>80%</b> — the reciprocal of the 125% rule, stated differently.',
+  fb_i2_no:'Hint: restate the 125% rule. See <a onclick="openBookChapter(2)">Ch.3</a>.',
+  fb_i3_ok:"EGC = <b>green or bare copper</b>. White is the grounded neutral — don't confuse them.",
+  fb_i3_no:'White is for the neutral; black/red are hots. See <a onclick="openBookChapter(0)">Ch.1</a>.',
 }};
 function T(k){ return (STRINGS[_lang]||STRINGS.zh)[k]; }
 function registerInteractables(){
@@ -1348,18 +1444,7 @@ function nextTargetNode(){
 
 // ---------------- 答题系统（图纸/计算/验收共用） ----------------
 const ANSWERS={bp:2,c1:1,c2:2,c3:2,i1:1,i2:2,i3:3};
-const FEEDBACK={
-  bp:{ok:'正确。大功率固定厨房设备必须走<b>专用回路（Individual Branch Circuit）</b>，不与照明、插座共用。本工单即新增 C-3。',
-      no:'再想想——油炸锅 5kW，与照明或普通插座共用会怎样？翻教材 <a onclick="openBookChapter(2)">第③章 · 专用回路</a>。'},
-  c1:{ok:'I = 5000W ÷ 240V ≈ <b>20.8A</b>。',no:'用 I = P ÷ V。功率 5000W，电压 240V。见 <a onclick="openBookChapter(1)">第②章</a>。'},
-  c2:{ok:'连续负载 ×125%：20.8 × 1.25 ≈ 26A → 取不小于 26A 的标准规格 = <b>30A</b>。',
-      no:'连续负载（≥3小时）必须按 125% 取保护值，再向上取标准规格。见 <a onclick="openBookChapter(1)">第②章</a>。'},
-  c3:{ok:'30A 断路器 → 铜线 <b>10 AWG</b>（载流量 30A）。导线载流量必须 ≥ 断路器额定。',
-      no:'断路器保护的是导线：导线载流量 ≥ 30A 才行。查 <a onclick="openBookChapter(1)">第②章载流量表</a>。'},
-  i1:{ok:'NEC 210.8(B)：商用厨房 125V 15/20A 插座必须 <b>GFCI</b> 保护。',no:'水电共存区域，保护的是「人」。见 <a onclick="openBookChapter(2)">第③章</a>。'},
-  i2:{ok:'<b>80%</b>——与 125% 规则互为倒数表述。',no:'提示：125% 规则换个说法。见 <a onclick="openBookChapter(2)">第③章</a>。'},
-  i3:{ok:'EGC = <b>绿色或裸铜</b>。白色是接地中性线，别混。',no:'白色留给中性线，黑/红是火线。见 <a onclick="openBookChapter(0)">第①章</a>。'},
-};
+const FEEDBACK=new Proxy({},{get(_,q){return{ok:T('fb_'+q+'_ok'),no:T('fb_'+q+'_no')};}});
 const solved={};
 document.querySelectorAll('.opt').forEach(opt=>{
   opt.addEventListener('click',()=>{
@@ -1519,6 +1604,58 @@ function applyGameLang(){
   document.querySelectorAll('#toolbar .slot .name').forEach((n,i)=>{
     const names=T('tools'); if(names[i]) n.textContent=names[i];
   });
+  // -- blueprint modal --
+  const s=id=>document.getElementById(id);
+  if(s('bp-title'))   s('bp-title').textContent=T('bp_title');
+  if(s('bp-close'))   s('bp-close').textContent=T('bp_close');
+  if(s('bp-note'))    s('bp-note').textContent=T('bp_note');
+  if(s('bp-qtag'))    s('bp-qtag').textContent=T('bp_qtag');
+  if(s('bp-qtext'))   s('bp-qtext').textContent=T('bp_qtext');
+  if(s('bp-done'))    s('bp-done').textContent=T('bp_done_btn');
+  T('bp_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="bp"][data-v="\${i}"]\`);if(el)el.textContent=txt;});
+  // -- calc modal --
+  if(s('calc-title')) s('calc-title').textContent=T('calc_title');
+  if(s('calc-close')) s('calc-close').textContent=T('calc_close');
+  if(s('c1-qtag'))    s('c1-qtag').textContent=T('c1_qtag');
+  if(s('c1-qtext'))   s('c1-qtext').textContent=T('c1_qtext');
+  if(s('c2-qtag'))    s('c2-qtag').textContent=T('c2_qtag');
+  if(s('c2-qtext'))   s('c2-qtext').innerHTML=T('c2_qtext');
+  if(s('c3-qtag'))    s('c3-qtag').textContent=T('c3_qtag');
+  if(s('c3-qtext'))   s('c3-qtext').textContent=T('c3_qtext');
+  if(s('calc-done'))  s('calc-done').textContent=T('calc_done_btn');
+  ['c1','c2','c3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="\${q}"][data-v="\${i}"]\`);if(el)el.textContent=txt;}));
+  // -- book modal --
+  if(s('book-title')) s('book-title').textContent=T('book_title');
+  if(s('book-close')) s('book-close').textContent=T('book_close');
+  T('book_tabs').forEach((txt,i)=>{const el=s('book-tab-'+i);if(el)el.textContent=txt;});
+  for(let i=0;i<4;i++){const ch=s('ch'+i);const html=T('ch'+i+'_html');if(ch&&html)ch.innerHTML=html;}
+  // -- insp modal --
+  if(s('insp-title')) s('insp-title').textContent=T('insp_title');
+  if(s('insp-close')) s('insp-close').textContent=T('insp_close');
+  if(s('insp-intro')) s('insp-intro').textContent=T('insp_intro');
+  if(s('i1-qtag'))    s('i1-qtag').textContent=T('i1_qtag');
+  if(s('i1-qtext'))   s('i1-qtext').textContent=T('i1_qtext');
+  if(s('i2-qtag'))    s('i2-qtag').textContent=T('i2_qtag');
+  if(s('i2-qtext'))   s('i2-qtext').textContent=T('i2_qtext');
+  if(s('i3-qtag'))    s('i3-qtag').textContent=T('i3_qtag');
+  if(s('i3-qtext'))   s('i3-qtext').textContent=T('i3_qtext');
+  if(s('insp-done'))  s('insp-done').textContent=T('insp_done_btn');
+  ['i1','i2','i3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="\${q}"][data-v="\${i}"]\`);if(el)el.textContent=txt;}));
+  // -- cert modal --
+  if(s('cert-h2'))    s('cert-h2').textContent=T('cert_h2');
+  if(s('cert-sub'))   s('cert-sub').textContent=T('cert_sub');
+  if(s('cert-p'))     s('cert-p').textContent=T('cert_p');
+  T('cert_lis').forEach((txt,i)=>{const el=s('cert-li'+i);if(el)el.textContent=txt;});
+  if(s('stat-time-lbl')) s('stat-time-lbl').textContent=T('stat_time_lbl');
+  if(s('stat-miss-lbl')) s('stat-miss-lbl').textContent=T('stat_miss_lbl');
+  if(s('stat-book-lbl')) s('stat-book-lbl').textContent=T('stat_book_lbl');
+  if(s('cert-btn'))   s('cert-btn').textContent=T('cert_btn');
+  // -- re-render any already-correct quiz feedback in new language --
+  ['bp','c1','c2','c3','i1','i2','i3'].forEach(q=>{
+    const el=s(q+'-fb');
+    if(el&&el.classList.contains('ok')) el.innerHTML='\u2713 '+T('fb_'+q+'_ok');
+  });
+
 }
 function applyLang(l){
   _lang = l;
