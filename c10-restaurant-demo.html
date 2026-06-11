@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C-10 学徒 · 餐厅电气工程 Demo</title>
+<style>
+  :root{
+    --ink:#14181c;
+    --panel:#1d2329;
+    --panel-2:#252d35;
+    --line:#39434d;
+    --paper:#f3efe6;
+    --orange:#ff6a00;
+    --orange-dim:#b34a00;
+    --copper:#c77b3f;
+    --warn:#f2c230;
+    --ok:#3ecf6f;
+    --bad:#ff4d4d;
+    --blue-print:#16365c;
+    --blue-line:#cfe3f5;
+    --txt:#e8e4da;
+    --txt-dim:#9aa3ab;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--ink);font-family:var(--sans);color:var(--txt)}
+  #c{position:fixed;inset:0;display:block}
+
+  /* ---------- crosshair & prompt ---------- */
+  #crosshair{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border:1.5px solid #fff;border-radius:50%;opacity:.85;pointer-events:none;z-index:5;box-shadow:0 0 4px rgba(0,0,0,.6)}
+  #crosshair.hot{border-color:var(--orange);box-shadow:0 0 8px var(--orange)}
+  #prompt{position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);background:rgba(20,24,28,.85);border:1px solid var(--line);border-left:3px solid var(--orange);padding:7px 14px;font-size:14px;border-radius:4px;pointer-events:none;z-index:5;white-space:nowrap;display:none}
+  #prompt b{color:var(--orange);font-family:var(--mono)}
+  #tester-tip{position:fixed;left:50%;top:calc(50% - 46px);transform:translateX(-50%);font-family:var(--mono);font-size:13px;padding:5px 12px;border-radius:4px;z-index:5;display:none;pointer-events:none}
+  #tester-tip.live{display:block;background:rgba(80,10,10,.85);border:1px solid var(--bad);color:#ffb3b3}
+  #tester-tip.dead{display:block;background:rgba(15,40,25,.85);border:1px solid var(--ok);color:#a9f0c4}
+
+  /* ---------- objective (work order) ---------- */
+  #workorder{position:fixed;top:16px;left:16px;width:295px;background:var(--paper);color:#2a2620;border-radius:3px;z-index:6;box-shadow:0 6px 18px rgba(0,0,0,.5);transform:rotate(-.5deg)}
+  #workorder .clip{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:64px;height:16px;background:#8b8f96;border-radius:8px 8px 3px 3px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3)}
+  #workorder header{padding:14px 16px 8px;border-bottom:2px solid #2a2620;display:flex;justify-content:space-between;align-items:baseline}
+  #workorder header h1{font-size:13px;letter-spacing:.18em;font-weight:800}
+  #workorder header span{font-family:var(--mono);font-size:11px;color:#7a7468}
+  #workorder .job{padding:10px 16px 4px;font-size:12px;color:#5c564c;line-height:1.5}
+  #workorder .step{display:flex;gap:9px;padding:9px 16px;font-size:13.5px;line-height:1.45;align-items:flex-start}
+  #workorder .step .box{flex:none;width:15px;height:15px;border:2px solid #2a2620;margin-top:2px;border-radius:2px;font-size:11px;line-height:11px;text-align:center;font-weight:900}
+  #workorder .step.done{color:#9a9488;text-decoration:line-through}
+  #workorder .step.done .box{background:#2a2620;color:var(--paper)}
+  #workorder .step.now{font-weight:700}
+  #workorder .step.now .box{border-color:var(--orange-dim);box-shadow:0 0 0 2px rgba(255,106,0,.25)}
+  #workorder footer{padding:6px 16px 12px;font-family:var(--mono);font-size:11px;color:#7a7468;border-top:1px dashed #c9c2b2}
+
+  /* ---------- toolbar ---------- */
+  #toolbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;z-index:6}
+  .slot{width:74px;background:rgba(29,35,41,.92);border:1px solid var(--line);border-radius:6px;padding:8px 4px 6px;text-align:center;cursor:pointer;transition:transform .1s,border-color .1s}
+  .slot .key{font-family:var(--mono);font-size:10px;color:var(--txt-dim)}
+  .slot .icon{font-size:21px;line-height:1.5}
+  .slot .name{font-size:11px;color:var(--txt-dim)}
+  .slot.active{border-color:var(--orange);transform:translateY(-5px);background:rgba(43,32,24,.95)}
+  .slot.active .name{color:var(--orange)}
+
+  /* ---------- multimeter LCD ---------- */
+  #meter{position:fixed;right:18px;bottom:18px;width:215px;background:#21262b;border:1px solid #444;border-radius:10px;padding:12px;z-index:6;display:none;box-shadow:0 8px 20px rgba(0,0,0,.55)}
+  #meter .brand{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:#888;display:flex;justify-content:space-between}
+  #meter .lcd{margin-top:8px;background:#9fb08a;color:#1c2416;border-radius:4px;padding:10px 12px;font-family:var(--mono);box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+  #meter .lcd .v{font-size:30px;font-weight:700;letter-spacing:.03em}
+  #meter .lcd .l{font-size:10px;margin-top:2px;opacity:.75}
+  #meter .hint{margin-top:8px;font-size:11px;color:var(--txt-dim);line-height:1.5}
+
+  /* ---------- exam point toast ---------- */
+  #toasts{position:fixed;right:18px;top:18px;width:320px;z-index:8;display:flex;flex-direction:column;gap:10px}
+  .toast{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--warn);border-radius:6px;padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.5);animation:tin .3s ease}
+  .toast .tag{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--warn);margin-bottom:5px}
+  .toast .body{font-size:13px;line-height:1.55}
+  .toast .ref{margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--txt-dim)}
+  @keyframes tin{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+  .toast.out{opacity:0;transform:translateX(24px);transition:.35s}
+
+  /* ---------- modal base ---------- */
+  .modal-wrap{position:fixed;inset:0;background:rgba(8,10,12,.72);z-index:20;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+  .modal-wrap.open{display:flex}
+  .modal{width:min(860px,94vw);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+  .modal .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+  .modal .mhead h2{font-size:15px;letter-spacing:.06em}
+  .modal .mhead .mx{cursor:pointer;border:1px solid var(--line);background:none;color:var(--txt-dim);border-radius:4px;padding:4px 12px;font-size:12px;font-family:var(--mono)}
+  .modal .mhead .mx:hover{color:var(--txt);border-color:var(--txt-dim)}
+  .modal .mbody{padding:20px}
+
+  /* quiz */
+  .q{margin-top:16px}
+  .q .qt{font-size:14.5px;line-height:1.6;margin-bottom:10px}
+  .q .qt .qtag{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--orange);border:1px solid var(--orange-dim);border-radius:3px;padding:1px 7px;margin-right:8px;vertical-align:1px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .opt{border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:11px 14px;cursor:pointer;font-size:14px;font-family:var(--mono);transition:border-color .12s}
+  .opt:hover{border-color:var(--txt-dim)}
+  .opt.right{border-color:var(--ok);background:rgba(62,207,111,.1)}
+  .opt.wrong{border-color:var(--bad);background:rgba(255,77,77,.08);animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  .fb{margin-top:12px;font-size:13px;line-height:1.6;border-left:3px solid var(--line);padding:8px 12px;color:var(--txt-dim);display:none}
+  .fb.ok{display:block;border-color:var(--ok);color:#bfe9cd}
+  .fb.no{display:block;border-color:var(--bad);color:#f0b9b9}
+  .fb a{color:var(--warn);cursor:pointer;text-decoration:underline}
+  .nameplate{display:inline-block;background:#b9bdc2;color:#23262a;border:2px solid #888;border-radius:4px;padding:10px 16px;font-family:var(--mono);font-size:12.5px;line-height:1.7;margin-bottom:6px;box-shadow:inset 0 1px 0 #fff}
+  .nameplate b{font-size:14px}
+  .mbtn{display:inline-block;margin-top:18px;background:var(--orange);color:#1a0d02;border:none;border-radius:6px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans)}
+  .mbtn:disabled{background:#5a5048;color:#2b2b2b;cursor:not-allowed}
+
+  /* blueprint */
+  #bp-svg-wrap{background:var(--blue-print);border-radius:6px;padding:10px;border:1px solid #2a4d7d}
+  #bp-svg-wrap svg{width:100%;height:auto;display:block}
+  .bp-note{margin-top:10px;font-size:12px;color:var(--txt-dim);font-family:var(--mono)}
+
+  /* textbook */
+  #book .modal{width:min(880px,94vw)}
+  .book-tabs{display:flex;gap:6px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:53px;z-index:2}
+  .book-tabs button{background:none;border:none;border-bottom:2px solid transparent;color:var(--txt-dim);padding:11px 13px;font-size:13px;cursor:pointer;font-family:var(--sans)}
+  .book-tabs button.on{color:var(--warn);border-bottom-color:var(--warn)}
+  .chapter{display:none;font-size:14px;line-height:1.85;color:#d8d4ca}
+  .chapter.on{display:block}
+  .chapter h3{font-size:15px;margin:18px 0 8px;color:var(--txt)}
+  .chapter h3:first-child{margin-top:0}
+  .chapter table{border-collapse:collapse;margin:10px 0;font-family:var(--mono);font-size:12.5px}
+  .chapter td,.chapter th{border:1px solid var(--line);padding:6px 14px;text-align:center}
+  .chapter th{background:var(--panel-2);color:var(--txt-dim);font-weight:600}
+  .kp{background:rgba(242,194,48,.08);border:1px dashed #6b5a1e;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px}
+  .kp::before{content:"📌 C-10 考点 ";font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;color:var(--warn);display:block;margin-bottom:4px}
+  .formula{font-family:var(--mono);background:var(--panel-2);border-radius:4px;padding:8px 14px;display:inline-block;margin:4px 0}
+
+  /* certificate */
+  #cert .modal{width:min(620px,94vw);background:var(--paper);color:#2a2620}
+  #cert .mbody{text-align:center;padding:36px 30px}
+  #cert .seal{width:84px;height:84px;border-radius:50%;border:3px double var(--orange-dim);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:34px;background:rgba(255,106,0,.07)}
+  #cert h2{font-size:21px;letter-spacing:.12em;margin-bottom:4px}
+  #cert .sub{font-family:var(--mono);font-size:11px;color:#7a7468;letter-spacing:.2em;margin-bottom:18px}
+  #cert .stats{display:flex;justify-content:center;gap:26px;margin:16px 0}
+  #cert .stats div{font-family:var(--mono);font-size:12px;color:#5c564c}
+  #cert .stats b{display:block;font-size:22px;color:#2a2620}
+  #cert ul{text-align:left;display:inline-block;margin:8px 0 0;font-size:13px;line-height:1.9;color:#4a443a}
+  #cert .mbtn{background:#2a2620;color:var(--paper)}
+
+  /* start overlay */
+  #start{position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse at 50% 35%,#222b33 0%,#0d1013 70%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+  #start .badge{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--orange);border:1px solid var(--orange-dim);padding:5px 14px;border-radius:3px;margin-bottom:18px}
+  #start h1{font-size:34px;letter-spacing:.06em;margin-bottom:8px}
+  #start p{color:var(--txt-dim);font-size:14px;max-width:520px;line-height:1.8}
+  #start .keys{display:flex;gap:18px;margin:26px 0;font-family:var(--mono);font-size:12px;color:var(--txt-dim);flex-wrap:wrap;justify-content:center}
+  #start .keys b{color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-bottom-width:3px;border-radius:5px;padding:3px 9px;margin-right:6px}
+  #start .mbtn{font-size:16px;padding:13px 38px}
+  #start .mobile-note{margin-top:16px;font-size:12px;color:#6d7680}
+
+  #hint-bar{position:fixed;bottom:16px;left:16px;font-family:var(--mono);font-size:11px;color:var(--txt-dim);z-index:5;background:rgba(20,24,28,.7);padding:6px 10px;border-radius:4px;line-height:1.7}
+  #hint-bar b{color:var(--txt)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="crosshair"></div>
+<div id="prompt"></div>
+<div id="tester-tip"></div>
+
+<!-- 工单 -->
+<div id="workorder">
+  <div class="clip"></div>
+  <header><h1>工 单 #1042</h1><span>BAYSIDE ELECTRIC</span></header>
+  <div class="job">客户：海湾小馆（装修中）<br>任务：为新购商用油炸锅增设专用回路，并通过竣工验收。</div>
+  <div id="steps"></div>
+  <footer>C-10 APPRENTICE · 按 <b>B</b> 查阅随身教材</footer>
+</div>
+
+<!-- 工具栏 -->
+<div id="toolbar"></div>
+
+<!-- 万用表 -->
+<div id="meter">
+  <div class="brand"><span>FIELDPRO</span><span>DMM-87</span></div>
+  <div class="lcd"><div class="v" id="meter-v">-- --</div><div class="l" id="meter-l">V AC · 对准测试点按 左键 测量</div></div>
+  <div class="hint">分段测量：从电源侧向负载侧逐点测，电压消失处的上游即故障点。</div>
+</div>
+
+<div id="toasts"></div>
+<div id="hint-bar"><b>WASD</b> 移动 · <b>鼠标</b> 视角 · <b>E</b> 互动 · <b>1-5</b> 工具 · <b>B</b> 教材 · <b>Esc</b> 释放鼠标</div>
+
+<!-- ===== 开场 ===== -->
+<div id="start">
+  <div class="badge">C-10 LICENSE TRAINING · VERTICAL SLICE</div>
+  <h1>学徒电工 · 餐厅工程</h1>
+  <p>海湾小馆正在装修，老板新买了一台 5kW 商用油炸锅。你的师傅把活儿交给了你：读图、算载、布线、排障、过验收——每一步都对应 C-10 考试的真实考点。</p>
+  <div class="keys">
+    <span><b>W A S D</b>移动</span><span><b>鼠标</b>视角</span><span><b>E</b>互动</span><span><b>1–5</b>切换工具</span><span><b>B</b>教材</span>
+  </div>
+  <button class="mbtn" id="start-btn">开始上工 →</button>
+  <div class="mobile-note">需要键盘和鼠标，请在桌面浏览器中游玩</div>
+</div>
+
+<!-- ===== 图纸 ===== -->
+<div class="modal-wrap" id="bp">
+  <div class="modal">
+    <div class="mhead"><h2>📐 电气平面图 · E-101 · 海湾小馆</h2><button class="mx" data-close="bp">关闭 [Esc]</button></div>
+    <div class="mbody">
+      <div id="bp-svg-wrap"><!-- SVG 注入 --></div>
+      <div class="bp-note">SHEET E-101 · SCALE NTS · PANEL "LP-1" 120/240V 1Φ 3W · 本图为训练用简化图</div>
+      <div class="q" id="bp-q">
+        <div class="qt"><span class="qtag">考点 · 专用回路</span>根据图例与 NEC 要求，新装的 5kW 商用油炸锅应当接入哪条回路？</div>
+        <div class="opts">
+          <div class="opt" data-q="bp" data-v="0">C-1 · 照明回路（与吊灯共用）</div>
+          <div class="opt" data-q="bp" data-v="1">C-2 · 用餐区普通插座回路</div>
+          <div class="opt" data-q="bp" data-v="2">C-3 · 厨房设备专用回路（新增）</div>
+          <div class="opt" data-q="bp" data-v="3">随便哪条，只要电压对就行</div>
+        </div>
+        <div class="fb" id="bp-fb"></div>
+        <button class="mbtn" id="bp-done" disabled>明白了，去看设备铭牌 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 负载计算 ===== -->
+<div class="modal-wrap" id="calc">
+  <div class="modal">
+    <div class="mhead"><h2>⚡ 负载计算 · 油炸锅专用回路</h2><button class="mx" data-close="calc">关闭 [Esc]</button></div>
+    <div class="mbody">
+      <div class="nameplate">
+        COMMERCIAL DEEP FRYER · MODEL FRY-5000<br>
+        <b>240V AC · 5000W · 1Φ</b><br>
+        CONTINUOUS DUTY（连续负载）
+      </div>
+      <div class="q" id="calc-q1">
+        <div class="qt"><span class="qtag">第 1 步 · 电流</span>这台油炸锅的满载电流约为多少？（I = P ÷ V）</div>
+        <div class="opts">
+          <div class="opt" data-q="c1" data-v="0">12.5 A</div>
+          <div class="opt" data-q="c1" data-v="1">20.8 A</div>
+          <div class="opt" data-q="c1" data-v="2">41.7 A</div>
+          <div class="opt" data-q="c1" data-v="3">5.0 A</div>
+        </div>
+        <div class="fb" id="c1-fb"></div>
+      </div>
+      <div class="q" id="calc-q2" style="display:none">
+        <div class="qt"><span class="qtag">第 2 步 · 断路器</span>铭牌标注为<b>连续负载</b>。按 NEC 125% 规则（20.8 × 1.25 ≈ 26A），应选多大的断路器？</div>
+        <div class="opts">
+          <div class="opt" data-q="c2" data-v="0">20 A</div>
+          <div class="opt" data-q="c2" data-v="1">25 A</div>
+          <div class="opt" data-q="c2" data-v="2">30 A</div>
+          <div class="opt" data-q="c2" data-v="3">50 A</div>
+        </div>
+        <div class="fb" id="c2-fb"></div>
+      </div>
+      <div class="q" id="calc-q3" style="display:none">
+        <div class="qt"><span class="qtag">第 3 步 · 线规</span>30A 断路器配铜导线（75°C 端子，简化表），应选哪种线规？</div>
+        <div class="opts">
+          <div class="opt" data-q="c3" data-v="0">14 AWG（15A）</div>
+          <div class="opt" data-q="c3" data-v="1">12 AWG（20A）</div>
+          <div class="opt" data-q="c3" data-v="2">10 AWG（30A）</div>
+          <div class="opt" data-q="c3" data-v="3">8 AWG（40A）</div>
+        </div>
+        <div class="fb" id="c3-fb"></div>
+      </div>
+      <button class="mbtn" id="calc-done" disabled style="display:none">领取材料：10 AWG 线缆 + 30A 断路器 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 教材 ===== -->
+<div class="modal-wrap" id="book">
+  <div class="modal">
+    <div class="mhead"><h2>📕 C-10 学徒手册（随身教材）</h2><button class="mx" data-close="book">关闭 [Esc / B]</button></div>
+    <div class="book-tabs" id="book-tabs">
+      <button data-ch="0" class="on">① 电路基础</button>
+      <button data-ch="1">② 负载计算</button>
+      <button data-ch="2">③ NEC 要点</button>
+      <button data-ch="3">④ 故障排查</button>
+    </div>
+    <div class="mbody">
+      <div class="chapter on" id="ch0">
+        <h3>火线 / 零线 / 地线</h3>
+        <p>北美住宅与轻型商业：<b>Hot（黑/红）</b>带电送出，<b>Neutral（白）</b>回流，<b>Ground（绿/裸）</b>仅作故障保护通路，正常情况下不载流。240V 单相设备使用两根火线（L1-L2），相间电压 240V。</p>
+        <div class="kp">考题常以导线颜色与功能配对的形式出现：设备接地导体（EGC）= 绿色或裸铜，接地中性线（Grounded Conductor）= 白色/灰色。</div>
+        <h3>断路器的作用</h3>
+        <p>断路器保护的是<b>导线</b>不过载，不是保护电器。导线允许载流量必须 ≥ 断路器额定值。</p>
+      </div>
+      <div class="chapter" id="ch1">
+        <h3>三步走</h3>
+        <p>① 求电流：<span class="formula">I = P ÷ V</span>　② 连续负载（持续 ≥3 小时）按 <span class="formula">I × 125%</span> 选保护；等价说法：断路器持续负载不得超过额定值的 <b>80%</b>。　③ 按断路器选不小于其额定的导线。</p>
+        <h3>常用铜导线载流量（75°C 简化）</h3>
+        <table><tr><th>线规</th><td>14 AWG</td><td>12 AWG</td><td>10 AWG</td><td>8 AWG</td><td>6 AWG</td></tr>
+        <tr><th>载流量</th><td>15 A</td><td>20 A</td><td>30 A</td><td>50 A</td><td>65 A</td></tr></table>
+        <div class="kp">本工单示例：5000W ÷ 240V ≈ 20.8A → ×1.25 ≈ 26A → 取标准规格 30A 断路器 → 配 10 AWG 铜线。计算题是 C-10 笔试占比最高的题型。</div>
+      </div>
+      <div class="chapter" id="ch2">
+        <h3>商用厨房 GFCI</h3>
+        <p>NEC 210.8(B)：商用厨房内 125V 15/20A 插座必须有 <b>GFCI</b>（接地故障断路器）保护——水与电共存的区域，人身保护优先。</p>
+        <h3>专用回路（Individual Branch Circuit)</h3>
+        <p>固定安装的大功率厨房设备（油炸锅、烤箱等）应使用专用回路，不与照明或普通插座共用，避免互相影响并便于检修隔离。</p>
+        <h3>80% / 125% 规则</h3>
+        <p>NEC 210.19 / 210.20：连续负载下导线与过流保护均按 125% 取值。</p>
+        <div class="kp">验收检查（Inspection）类考题常考：GFCI 适用场所、回路是否专用、导线-断路器匹配。违规 = Fail Inspection = 返工。</div>
+      </div>
+      <div class="chapter" id="ch3">
+        <h3>分段电压测量法</h3>
+        <p>从电源侧向负载侧逐点测电压：配电箱 → 接线盒 J1 → 接线盒 J2 → 设备端。<b>电压「消失」的那一段</b>就是故障区间——常见原因：接头松动、断线、端子氧化。</p>
+        <p>例：配电箱 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ 故障在 J1 与 J2 之间（多为 J2 进线端子松动）。</p>
+        <div class="kp">排障题在 C-10 实务部分常以「给读数、判位置」的形式出现。记住口诀：<b>有压到哪里，故障在下一段。</b></div>
+        <h3>安全第一</h3>
+        <p>带电测量使用万用表；紧固端子前必须断开断路器并验电确认无电（Lockout/Tagout 思想）。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 验收 ===== -->
+<div class="modal-wrap" id="insp">
+  <div class="modal">
+    <div class="mhead"><h2>🪪 竣工验收 · 检查员 Rodriguez</h2><button class="mx" data-close="insp">关闭 [Esc]</button></div>
+    <div class="mbody">
+      <p style="font-size:13.5px;color:var(--txt-dim);line-height:1.7">「活儿干得不错，小伙子。不过签字之前，按惯例考你三个问题——答错也没关系，翻你的小红书去（按 B）。」</p>
+      <div class="q">
+        <div class="qt"><span class="qtag">NEC 210.8(B)</span>商用厨房里的 125V 15/20A 插座，需要哪种保护？</div>
+        <div class="opts">
+          <div class="opt" data-q="i1" data-v="0">AFCI 电弧故障保护</div>
+          <div class="opt" data-q="i1" data-v="1">GFCI 接地故障保护</div>
+          <div class="opt" data-q="i1" data-v="2">不需要额外保护</div>
+          <div class="opt" data-q="i1" data-v="3">防雷击浪涌保护</div>
+        </div>
+        <div class="fb" id="i1-fb"></div>
+      </div>
+      <div class="q">
+        <div class="qt"><span class="qtag">NEC 210.20</span>断路器上的连续负载，不应超过其额定值的——</div>
+        <div class="opts">
+          <div class="opt" data-q="i2" data-v="0">100%</div>
+          <div class="opt" data-q="i2" data-v="1">90%</div>
+          <div class="opt" data-q="i2" data-v="2">80%</div>
+          <div class="opt" data-q="i2" data-v="3">50%</div>
+        </div>
+        <div class="fb" id="i2-fb"></div>
+      </div>
+      <div class="q">
+        <div class="qt"><span class="qtag">导线识别</span>设备接地导体（EGC）的颜色应为——</div>
+        <div class="opts">
+          <div class="opt" data-q="i3" data-v="0">白色</div>
+          <div class="opt" data-q="i3" data-v="1">黑色</div>
+          <div class="opt" data-q="i3" data-v="2">红色</div>
+          <div class="opt" data-q="i3" data-v="3">绿色或裸铜</div>
+        </div>
+        <div class="fb" id="i3-fb"></div>
+      </div>
+      <button class="mbtn" id="insp-done" disabled>提交验收 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 证书 ===== -->
+<div class="modal-wrap" id="cert">
+  <div class="modal">
+    <div class="mbody">
+      <div class="seal">⚡</div>
+      <h2>验 收 通 过</h2>
+      <div class="sub">CSLB · C-10 TRAINING MODULE 01 · COMPLETE</div>
+      <p style="font-size:13.5px;line-height:1.7;color:#4a443a">海湾小馆油炸锅专用回路：通电正常，验收签字。本关覆盖的 C-10 考点已计入你的能力档案：</p>
+      <ul>
+        <li>📐 图纸阅读 · 专用回路识别</li>
+        <li>⚡ 负载计算 · I=P/V · 125% 连续负载规则</li>
+        <li>🔌 导线载流量匹配（NEC 310.16）</li>
+        <li>🔍 分段电压排障法</li>
+        <li>🪪 GFCI / 80% 规则 / 导线颜色（验收口试）</li>
+      </ul>
+      <div class="stats">
+        <div><b id="stat-time">--:--</b>用时</div>
+        <div><b id="stat-miss">0</b>答错次数</div>
+        <div><b id="stat-book">0</b>翻教材次数</div>
+      </div>
+      <button class="mbtn" data-close="cert">继续在餐厅里逛逛</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   C-10 学徒电工 · 餐厅工程 Demo
+   架构：Scene(THREE) + Interactable注册表 + 工具系统 + 阶段状态机
+   ===================================================================== */
+
+// ---------------- 蓝图 SVG（与3D场景布局一致的简化平面图） ----------------
+document.getElementById('bp-svg-wrap').innerHTML = `
+<svg viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,Menlo,monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0H0V20" fill="none" stroke="#1f4470" stroke-width=".6"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="560" fill="#16365c"/>
+  <rect width="800" height="560" fill="url(#grid)"/>
+  <g stroke="#cfe3f5" fill="none" stroke-width="3">
+    <rect x="70" y="60" width="660" height="430"/>
+    <line x1="70" y1="250" x2="310" y2="250"/><line x1="430" y1="250" x2="730" y2="250"/>
+  </g>
+  <g fill="#cfe3f5" font-size="15" letter-spacing="2">
+    <text x="400" y="40" text-anchor="middle" font-size="17">海湾小馆 · 电气平面图 E-101</text>
+    <text x="170" y="160">厨 房 KITCHEN</text>
+    <text x="400" y="390" text-anchor="middle">用 餐 区 DINING</text>
+    <text x="395" y="540" text-anchor="middle" font-size="12">↑ 入口 ENTRY</text>
+  </g>
+  <!-- 厨房设备 -->
+  <g stroke="#cfe3f5" stroke-width="1.6" fill="none" font-size="11">
+    <rect x="90" y="75" width="90" height="70"/><text x="135" y="115" fill="#cfe3f5" text-anchor="middle" stroke="none">冷库</text>
+    <rect x="210" y="75" width="80" height="50"/><text x="250" y="105" fill="#cfe3f5" text-anchor="middle" stroke="none">炉灶</text>
+    <rect x="520" y="75" width="80" height="50" stroke="#ffb066" stroke-width="2.5"/>
+    <text x="560" y="105" fill="#ffb066" text-anchor="middle" stroke="none">油炸锅★</text>
+    <rect x="340" y="200" width="240" height="40"/><text x="460" y="225" fill="#cfe3f5" text-anchor="middle" stroke="none">吧台 COUNTER</text>
+  </g>
+  <!-- 配电箱 -->
+  <rect x="74" y="190" width="22" height="44" fill="#cfe3f5"/>
+  <text x="108" y="218" fill="#cfe3f5" font-size="11">LP-1 配电箱</text>
+  <!-- 回路 -->
+  <g fill="none" stroke-width="2">
+    <path d="M96 200 H 330 M330 200 V 330 H 560 M 200 330 H 330" stroke="#9fd0ff" stroke-dasharray="6 5"/>
+    <path d="M96 226 Q 300 300 430 300 T 690 300" stroke="#7fe6a8" stroke-dasharray="2 6"/>
+    <path d="M96 212 H 360 H 470 H 560 V 125" stroke="#ffb066"/>
+  </g>
+  <g font-size="11">
+    <text x="250" y="193" fill="#9fd0ff">C-1 照明（吊灯×4）</text>
+    <text x="430" y="320" fill="#7fe6a8">C-2 用餐区插座 20A</text>
+    <text x="300" y="230" fill="#ffb066">C-3 厨房设备专用（新增·本工单）</text>
+    <circle cx="360" cy="212" r="7" fill="#16365c" stroke="#ffb066" stroke-width="2"/><text x="360" y="216" fill="#ffb066" text-anchor="middle" font-size="9">J1</text>
+    <circle cx="470" cy="212" r="7" fill="#16365c" stroke="#ffb066" stroke-width="2"/><text x="470" y="216" fill="#ffb066" text-anchor="middle" font-size="9">J2</text>
+  </g>
+  <!-- 图例 -->
+  <g font-size="11" fill="#cfe3f5">
+    <rect x="560" y="430" width="160" height="50" fill="#16365c" stroke="#2a4d7d"/>
+    <text x="572" y="448">— 实线：电力回路</text>
+    <text x="572" y="466">◯ J# ：接线盒</text>
+  </g>
+</svg>`;
+
+// ---------------- 基础渲染 ----------------
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.shadowMap.enabled = false;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0e11);
+scene.fog = new THREE.Fog(0x0c0e11, 18, 34);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, .05, 80);
+// 玩家相机绑架构：yaw -> pitch -> camera
+const pitchObj = new THREE.Object3D(); pitchObj.add(camera);
+const player = new THREE.Object3D(); player.add(pitchObj);
+player.position.set(0, 1.65, 4.6);
+scene.add(player);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+renderer.setSize(innerWidth, innerHeight);
+
+// ---------------- 材质库 ----------------
+const M = {
+  floorWood : new THREE.MeshStandardMaterial({color:0x6e4a2f, roughness:.85}),
+  floorTile : new THREE.MeshStandardMaterial({color:0x8b9094, roughness:.6, metalness:.1}),
+  wall      : new THREE.MeshStandardMaterial({color:0x9c4a3c, roughness:.95}),
+  wainscot  : new THREE.MeshStandardMaterial({color:0x3a2d22, roughness:.9}),
+  ceil      : new THREE.MeshStandardMaterial({color:0x2a2d31, roughness:1}),
+  counter   : new THREE.MeshStandardMaterial({color:0x4a3424, roughness:.7}),
+  counterTop: new THREE.MeshStandardMaterial({color:0xd8d3c8, roughness:.4}),
+  steel     : new THREE.MeshStandardMaterial({color:0xb9bdc2, roughness:.35, metalness:.75}),
+  steelDark : new THREE.MeshStandardMaterial({color:0x6f7479, roughness:.4, metalness:.7}),
+  tableTop  : new THREE.MeshStandardMaterial({color:0x7c553a, roughness:.6}),
+  black     : new THREE.MeshStandardMaterial({color:0x1b1d20, roughness:.8}),
+  red       : new THREE.MeshStandardMaterial({color:0x8c2f2f, roughness:.8}),
+  panelGray : new THREE.MeshStandardMaterial({color:0xc6cad0, roughness:.4, metalness:.5}),
+  jbox      : new THREE.MeshStandardMaterial({color:0x9aa0a8, roughness:.5, metalness:.6}),
+  conduit   : new THREE.MeshStandardMaterial({color:0xc77b3f, roughness:.35, metalness:.8}),
+  paper     : new THREE.MeshStandardMaterial({color:0xeae4d4, roughness:.9}),
+  bookRed   : new THREE.MeshStandardMaterial({color:0xa83232, roughness:.7}),
+  glassWin  : new THREE.MeshStandardMaterial({color:0x1f2a36, roughness:.1, metalness:.3, emissive:0x0a1622}),
+  vest      : new THREE.MeshStandardMaterial({color:0xff6a00, roughness:.8}),
+};
+const box = (w,h,d,m)=> new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
+const cyl = (rt,rb,h,m,seg=14)=> new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m);
+
+// ---------------- 餐厅搭建 ----------------
+const ROOM = {w:17, d:13, h:3.4};   // x:-8.5..8.5  z:-6.5..6.5  厨房 z<-1.6
+function buildRoom(){
+  // 地板：用餐区木地板 / 厨房瓷砖
+  const dining = box(ROOM.w, .1, 8.5, M.floorWood); dining.position.set(0,-.05, 2.25); dining.receiveShadow=true; scene.add(dining);
+  const kitch  = box(ROOM.w, .1, 4.9, M.floorTile); kitch.position.set(0,-.05,-4.05); kitch.receiveShadow=true; scene.add(kitch);
+  // 天花
+  const ceil = box(ROOM.w, .1, ROOM.d, M.ceil); ceil.position.set(0, ROOM.h, 0); scene.add(ceil);
+  // 四壁
+  const mkWall = (w,h,d,x,y,z,m=M.wall)=>{ const o=box(w,h,d,m); o.position.set(x,y,z); o.receiveShadow=true; scene.add(o); return o; };
+  mkWall(ROOM.w,ROOM.h,.2, 0,ROOM.h/2,-ROOM.d/2);            // 北（厨房后墙）
+  mkWall(.2,ROOM.h,ROOM.d, -ROOM.w/2,ROOM.h/2,0);            // 西
+  mkWall(.2,ROOM.h,ROOM.d,  ROOM.w/2,ROOM.h/2,0);            // 东
+  mkWall(6.2,ROOM.h,.2, -5.4,ROOM.h/2, ROOM.d/2);            // 南-左
+  mkWall(6.2,ROOM.h,.2,  5.4,ROOM.h/2, ROOM.d/2);            // 南-右
+  mkWall(4.6,.8,.2, 0, ROOM.h-.4, ROOM.d/2);                 // 门头
+  // 墙裙
+  mkWall(ROOM.w,1.0,.06, 0,.5,-ROOM.d/2+.14, M.wainscot);
+  mkWall(.06,1.0,ROOM.d, -ROOM.w/2+.14,.5,0, M.wainscot);
+  mkWall(.06,1.0,ROOM.d,  ROOM.w/2-.14,.5,0, M.wainscot);
+  // 临街窗
+  for(const x of [-5.4, 5.4]){ const win=box(4.4,1.6,.08,M.glassWin); win.position.set(x,1.9,ROOM.d/2-.06); scene.add(win); }
+  // 入口双开门（玻璃）
+  const door=box(2.2,2.5,.08,M.glassWin); door.position.set(0,1.25,ROOM.d/2); scene.add(door);
+}
+
+function buildDining(){
+  const tables=[[-5,2.2],[-1.7,3.4],[1.7,2.2],[5,3.4]];
+  for(const [x,z] of tables){
+    const g=new THREE.Group();
+    const top=cyl(.65,.65,.06,M.tableTop,20); top.position.y=.95; top.castShadow=true; g.add(top);
+    g.add(Object.assign(cyl(.06,.09,.92,M.black),{position:new THREE.Vector3(0,.47,0)}));
+    const base=cyl(.3,.34,.05,M.black,16); base.position.y=.03; g.add(base);
+    for(let i=0;i<3;i++){
+      const a=i/3*Math.PI*2 + x; // 角度随桌子错开
+      const ch=new THREE.Group();
+      const seat=box(.42,.05,.42,M.red); seat.position.y=.5; ch.add(seat);
+      const back=box(.42,.5,.05,M.red); back.position.set(0,.78,-.2); ch.add(back);
+      for(const [lx,lz] of [[-.18,-.18],[.18,-.18],[-.18,.18],[.18,.18]]){
+        const leg=cyl(.02,.02,.5,M.black,8); leg.position.set(lx,.25,lz); ch.add(leg);
+      }
+      ch.position.set(x+Math.cos(a)*1.05, 0, z+Math.sin(a)*1.05);
+      ch.lookAt(x,0,z); g.add(ch);
+    }
+    g.position.set(0,0,0); scene.add(g);
+    g.children[0].position.x=x; g.children[0].position.z=z;
+    g.children[1].position.x=x; g.children[1].position.z=z;
+    g.children[2].position.x=x; g.children[2].position.z=z;
+  }
+  // 吧台
+  const counter=new THREE.Group();
+  const body=box(7.5,1.05,.8,M.counter); body.position.y=.525; body.castShadow=true; counter.add(body);
+  const top=box(7.9,.07,1.0,M.counterTop); top.position.y=1.085; counter.add(top);
+  counter.position.set(-1,0,-1.1); scene.add(counter);
+  // 吧台凳
+  for(let i=0;i<4;i++){
+    const st=new THREE.Group();
+    st.add(Object.assign(cyl(.2,.2,.06,M.red,16),{position:new THREE.Vector3(0,.78,0)}));
+    st.add(Object.assign(cyl(.045,.06,.76,M.steelDark),{position:new THREE.Vector3(0,.39,0)}));
+    st.position.set(-4.2+i*2.1,0,-.1); scene.add(st);
+  }
+}
+
+function buildKitchen(){
+  // 后厨工作台（沿后墙）
+  const bench=box(5.2,.9,.85,M.steel); bench.position.set(-2.2,.45,-6.0); bench.castShadow=true; scene.add(bench);
+  // 炉灶
+  const range=box(1.4,1.0,.9,M.steelDark); range.position.set(-4.2,.5,-5.95); scene.add(range);
+  for(let i=0;i<4;i++){ const b=cyl(.12,.12,.03,M.black,12); b.position.set(-4.6+(i%2)*.7,1.02,-6.2+Math.floor(i/2)*.45); scene.add(b); }
+  // 抽油烟罩
+  const hood=box(3.2,.5,1.1,M.steelDark); hood.position.set(-3.2,2.85,-5.9); scene.add(hood);
+  // 冷库（大箱子，西北角）
+  const cooler=box(2.4,2.6,2.2,M.steel); cooler.position.set(-7.2,1.3,-5.3); cooler.castShadow=true; scene.add(cooler);
+  const cdoor=box(.06,1.9,1.0,M.steelDark); cdoor.position.set(-5.98,1.1,-5.2); scene.add(cdoor);
+  // 备菜台（中岛）
+  const island=box(2.6,.9,1.1,M.steel); island.position.set(0,.45,-3.6); island.castShadow=true; scene.add(island);
+}
+
+// ---------------- 电气设备（核心互动物） ----------------
+const E = {};   // 电气对象引用
+function buildElectrical(){
+  // ---- 配电箱 LP-1（西墙）----
+  const panel=new THREE.Group();
+  const body=box(.55,.85,.12,M.panelGray); body.castShadow=true; panel.add(body);
+  const pdoor=box(.5,.78,.03,M.panelGray); pdoor.position.z=.07; panel.add(pdoor);
+  const label=box(.3,.08,.005,M.paper); label.position.set(0,.32,.09); panel.add(label);
+  // 新断路器空位（初始为暗槽，安装后变橙）
+  E.breakerSlot=box(.09,.16,.05,new THREE.MeshStandardMaterial({color:0x2a2d31,roughness:.6}));
+  E.breakerSlot.position.set(0,-.02,.085); panel.add(E.breakerSlot);
+  // 已有断路器排
+  for(let i=0;i<4;i++){ const b=box(.08,.05,.04,M.black); b.position.set(-.12+(i%2)*.24,.16-Math.floor(i/2)*.09,.085); panel.add(b); }
+  panel.position.set(-8.35,1.5,-2.6); panel.rotation.y=Math.PI/2;
+  scene.add(panel); E.panel=panel;
+
+  // ---- 油炸锅（厨房东侧，主角设备）----
+  const fryer=new THREE.Group();
+  const fb=box(1.0,.95,.85,M.steel); fb.position.y=.475; fb.castShadow=true; fryer.add(fb);
+  const basketWell=box(.8,.08,.6,M.black); basketWell.position.y=.99; fryer.add(basketWell);
+  const ctrl=box(1.0,.22,.1,M.steelDark); ctrl.position.set(0,.85,.48); fryer.add(ctrl);
+  E.fryerLamp=new THREE.Mesh(new THREE.SphereGeometry(.035,10,10),
+    new THREE.MeshStandardMaterial({color:0x441111,emissive:0x000000}));
+  E.fryerLamp.position.set(.32,.85,.54); fryer.add(E.fryerLamp);
+  const plate=box(.34,.2,.005,M.paper); plate.position.set(-.2,.62,.43); fryer.add(plate); // 铭牌
+  fryer.position.set(3.4,0,-5.85); scene.add(fryer); E.fryer=fryer;
+
+  // ---- 设备插座盒（油炸锅上方墙面）----
+  E.outlet=box(.16,.24,.1,M.jbox); E.outlet.position.set(3.4,1.35,-6.33); scene.add(E.outlet);
+
+  // ---- 接线盒 J1 / J2（后墙高处）----
+  E.j1=box(.22,.22,.1,M.jbox); E.j1.position.set(-3.0,2.7,-6.33); scene.add(E.j1);
+  E.j2=box(.22,.22,.1,M.jbox); E.j2.position.set(0.6,2.7,-6.33); scene.add(E.j2);
+  // J2 盖板（排障时拧开）
+  E.j2cover=box(.2,.2,.02,M.steelDark); E.j2cover.position.set(0.6,2.7,-6.26); scene.add(E.j2cover);
+
+  // ---- 教材 + 图纸卷（吧台上）----
+  E.book=box(.34,.06,.25,M.bookRed); E.book.position.set(-2.4,1.155,-1.1); E.book.rotation.y=.3;
+  E.book.castShadow=true; scene.add(E.book);
+  E.bpRoll=cyl(.05,.05,.62,M.paper,12); E.bpRoll.rotation.z=Math.PI/2; E.bpRoll.position.set(.4,1.17,-1.05);
+  E.bpRoll.rotation.y=.2; E.bpRoll.castShadow=true; scene.add(E.bpRoll);
+
+  // ---- 检查员（门口，锥体小人 + 安全帽）----
+  const insp=new THREE.Group();
+  insp.add(Object.assign(cyl(.16,.26,1.15,new THREE.MeshStandardMaterial({color:0x3a4148})),{position:new THREE.Vector3(0,.62,0)}));
+  insp.add(Object.assign(cyl(.17,.17,.3,M.vest,12),{position:new THREE.Vector3(0,1.0,0)}));
+  insp.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.14,12,12),new THREE.MeshStandardMaterial({color:0xd9a877})),{position:new THREE.Vector3(0,1.36,0)}));
+  insp.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.16,12,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xf2c230})),{position:new THREE.Vector3(0,1.41,0)}));
+  const board=box(.22,.3,.02,M.paper); board.position.set(.22,.95,.12); board.rotation.x=-.4; insp.add(board);
+  insp.position.set(1.6,0,5.4); insp.rotation.y=Math.PI+.4; insp.visible=false;
+  scene.add(insp); E.inspector=insp;
+}
+
+// ---------------- 灯光 ----------------
+const L = {};
+function buildLights(){
+  scene.add(new THREE.AmbientLight(0x303a44, .55));                         // 应急底光
+  const moon=new THREE.DirectionalLight(0x6f86a8,.25); moon.position.set(4,8,6); scene.add(moon);
+  L.work=new THREE.PointLight(0xffc878,.85,9,2); L.work.position.set(-1,2.2,-1); L.work.castShadow=true; scene.add(L.work); // 临时工作灯（吧台上方）
+  const lampMeshes=[];
+  L.pendants=[];
+  for(const [x,z] of [[-5,2.2],[-1.7,3.4],[1.7,2.2],[5,3.4]]){
+    const cord=cyl(.012,.012,.5,M.black,6); cord.position.set(x,3.15,z); scene.add(cord);
+    const shade=cyl(.16,.26,.18,new THREE.MeshStandardMaterial({color:0x274145,roughness:.5}),16);
+    shade.position.set(x,2.85,z); scene.add(shade);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.05,10,10),
+      new THREE.MeshStandardMaterial({color:0x554433,emissive:0x000000}));
+    bulb.position.set(x,2.78,z); scene.add(bulb);
+    const pl=new THREE.PointLight(0xffb066,0,7,2); pl.position.set(x,2.7,z); scene.add(pl);
+    L.pendants.push({pl,bulb});
+  }
+  // 厨房灯管
+  L.kitchenBars=[];
+  for(const x of [-4,0,3.4]){
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.18),
+      new THREE.MeshStandardMaterial({color:0x3a3f44,emissive:0x000000}));
+    bar.position.set(x,3.3,-4.2); scene.add(bar);
+    const pl=new THREE.PointLight(0xeaf2ff,0,8,2); pl.position.set(x,3.1,-4.2); scene.add(pl);
+    L.kitchenBars.push({pl,bar});
+  }
+  // 工作灯本体
+  const wl=new THREE.Mesh(new THREE.SphereGeometry(.09,10,10),new THREE.MeshStandardMaterial({color:0xffc878,emissive:0xffa040,emissiveIntensity:.9}));
+  wl.position.set(-1,2.2,-1); scene.add(wl);
+}
+function setDiningPower(on){ for(const p of L.pendants){ p.pl.intensity=on?.75:0; p.bulb.material.emissive.setHex(on?0xffb066:0); p.bulb.material.emissiveIntensity=on?1.4:0; } }
+function setKitchenPower(on){ for(const k of L.kitchenBars){ k.pl.intensity=on?.9:0; k.bar.material.emissive.setHex(on?0xdfe9ff:0); k.bar.material.emissiveIntensity=on?1.2:0; }
+  E.fryerLamp.material.emissive.setHex(on?0x33ff66:0); E.fryerLamp.material.emissiveIntensity=on?2:0;
+  E.fryerLamp.material.color.setHex(on?0x1c5a2e:0x441111); }
+
+// ---------------- 线管（玩家布线时逐段生成） ----------------
+// 预设路径节点（沿西墙上行 → 沿后墙横走 → 下到插座）
+const WIRE_PATH = [
+  new THREE.Vector3(-8.3, 1.95, -2.6),  // 配电箱顶
+  new THREE.Vector3(-8.3, 2.7,  -2.6),
+  new THREE.Vector3(-8.3, 2.7,  -6.33),
+  new THREE.Vector3(-3.0, 2.7,  -6.33), // J1
+  new THREE.Vector3( 0.6, 2.7,  -6.33), // J2
+  new THREE.Vector3( 3.4, 2.7,  -6.33),
+  new THREE.Vector3( 3.4, 1.47, -6.33), // 插座顶
+];
+function addConduit(a,b){
+  const len=a.distanceTo(b);
+  const seg=cyl(.025,.025,len,M.conduit,10);
+  seg.position.copy(a).lerp(b,.5);
+  seg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+  scene.add(seg); allMeshes.push(seg); return seg;
+}
+
+// ---------------- 控制：指针锁定 + WASD ----------------
+const keys={};
+let locked=false, yaw=0, pitch=0;
+addEventListener('keydown',e=>{ keys[e.code]=true;
+  if(e.code==='KeyB'){ toggleBook(); }
+  if(e.code==='Escape'){ closeAllModals(); }
+  if(/^Digit[1-5]$/.test(e.code)) setTool(+e.code.slice(5)-1);
+});
+addEventListener('keyup',e=>keys[e.code]=false);
+canvas.addEventListener('click',()=>{ if(!anyModalOpen() && !locked && started) canvas.requestPointerLock(); });
+document.addEventListener('pointerlockchange',()=>{ locked = document.pointerLockElement===canvas; });
+addEventListener('mousemove',e=>{
+  if(!locked) return;
+  yaw   -= e.movementX*.0022;
+  pitch -= e.movementY*.0022;
+  pitch = Math.max(-1.45, Math.min(1.45, pitch));
+  player.rotation.y=yaw; pitchObj.rotation.x=pitch;
+});
+const clock=new THREE.Clock();
+function movePlayer(dt){
+  if(!locked) return;
+  const sp=(keys.ShiftLeft?5.2:3.2)*dt;
+  const f=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const r=new THREE.Vector3(f.z,0,-f.x).negate();
+  const v=new THREE.Vector3();
+  if(keys.KeyW)v.add(f); if(keys.KeyS)v.sub(f);
+  if(keys.KeyD)v.add(r); if(keys.KeyA)v.sub(r);
+  if(v.lengthSq()>0){ v.normalize().multiplyScalar(sp); player.position.add(v); }
+  // 简单边界（留出冷库/吧台粗略碰撞）
+  player.position.x=Math.max(-7.9,Math.min(7.9,player.position.x));
+  player.position.z=Math.max(-5.0,Math.min(5.9,player.position.z));
+  // 吧台阻挡（z -1.6..-0.6, x -4.95..2.95）
+  const p=player.position;
+  if(p.x>-5.2 && p.x<3.2 && p.z>-1.75 && p.z<-0.45){
+    p.z = (p.z<-1.1)? -1.75 : -0.45;
+  }
+}
+
+// ---------------- 工具系统 ----------------
+const TOOLS=[
+  {icon:'✋', name:'徒手',   key:'1'},
+  {icon:'🖊️', name:'验电笔', key:'2'},
+  {icon:'📟', name:'万用表', key:'3'},
+  {icon:'🔌', name:'线缆',   key:'4'},
+  {icon:'🪛', name:'螺丝刀', key:'5'},
+];
+let tool=0;
+const toolbar=document.getElementById('toolbar');
+TOOLS.forEach((t,i)=>{
+  const d=document.createElement('div'); d.className='slot'+(i===0?' active':'');
+  d.innerHTML=`<div class="key">[${t.key}]</div><div class="icon">${t.icon}</div><div class="name">${t.name}</div>`;
+  d.onclick=()=>setTool(i); toolbar.appendChild(d);
+});
+function setTool(i){
+  if(i===3 && !G.hasWire){ toast('材料未到','先完成负载计算，才能从货车上领 10 AWG 线缆。',''); return; }
+  tool=i;
+  [...toolbar.children].forEach((s,j)=>s.classList.toggle('active',j===i));
+  document.getElementById('meter').style.display = i===2?'block':'none';
+  if(i!==2){ meterShow('-- --','V AC · 对准测试点按 左键 测量'); }
+}
+function meterShow(v,l){ document.getElementById('meter-v').textContent=v; document.getElementById('meter-l').textContent=l; }
+
+// ---------------- 互动注册表 ----------------
+const interactables=[];
+const allMeshes=[];   // 扁平 Mesh 列表，用于高效 raycasting（避免每帧递归遍历场景树）
+function reg(obj3d,opt){ obj3d.traverse(o=>{ if(o.isMesh){ o.userData.ia=opt; }}); interactables.push(obj3d); }
+const raycaster=new THREE.Raycaster(); raycaster.far=3.2;
+const center=new THREE.Vector2(0,0);
+let aimed=null, aimedMeshes=[];
+function pickAim(){
+  raycaster.setFromCamera(center,camera);
+  const hits=raycaster.intersectObjects(allMeshes,false);
+  let found=null;
+  for(const h of hits){ if(h.object.userData.ia){ found=h.object.userData.ia; break; }
+    if(h.object.isMesh && !h.object.userData.ia) break; // 被墙等挡住
+  }
+  return found;
+}
+
+// ---------------- HUD：工单 / 提示 / 考点 ----------------
+const STEPS=[
+  '到吧台阅读电气图纸 E-101',
+  '查看油炸锅铭牌，完成负载计算',
+  '布设 C-3 回路：配电箱 → J1 → J2 → 设备插座',
+  '回配电箱装上 30A 断路器并合闸',
+  '厨房回路无电！用万用表分段排查',
+  '修复故障点（先断电，再用螺丝刀紧固）',
+  '到门口找检查员 Rodriguez 验收',
+];
+function renderSteps(cur){
+  document.getElementById('steps').innerHTML = STEPS.map((s,i)=>
+    `<div class="step ${i<cur?'done':i===cur?'now':''}"><div class="box">${i<cur?'✓':''}</div><div>${s}</div></div>`).join('');
+}
+const promptEl=document.getElementById('prompt');
+function showPrompt(html){ promptEl.innerHTML=html; promptEl.style.display='block'; }
+function hidePrompt(){ promptEl.style.display='none'; }
+function toast(tag,body,ref){
+  const t=document.createElement('div'); t.className='toast';
+  t.innerHTML=`<div class="tag">📌 ${tag}</div><div class="body">${body}</div>${ref?`<div class="ref">${ref}</div>`:''}`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(),400); }, 7000);
+}
+
+// ---------------- 模态框管理 ----------------
+const MODALS=['bp','calc','book','insp','cert'];
+function openModal(id){ document.getElementById(id).classList.add('open'); document.exitPointerLock&&document.exitPointerLock(); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function closeAllModals(){ MODALS.forEach(closeModal); }
+function anyModalOpen(){ return MODALS.some(id=>document.getElementById(id).classList.contains('open')); }
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.dataset.close));
+let bookOpens=0;
+function toggleBook(){
+  const b=document.getElementById('book');
+  if(b.classList.contains('open')) closeModal('book');
+  else{ openModal('book'); bookOpens++; }
+}
+document.querySelectorAll('#book-tabs button').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#book-tabs button').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.chapter').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('ch'+btn.dataset.ch).classList.add('on');
+});
+function openBookChapter(n){ openModal('book'); bookOpens++;
+  document.querySelector(`#book-tabs button[data-ch="${n}"]`).click(); }
+
+// ---------------- 游戏状态机 ----------------
+const G = {
+  phase:0,            // 对应 STEPS 索引；7=完成
+  hasWire:false,      // 是否领到线缆
+  wireNext:0,         // 下一个布线节点索引（WIRE_PATH）
+  breakerOn:false,
+  faultFound:false,
+  faultFixed:false,
+  j2Open:false,
+  misses:0, t0:0,
+};
+function gotoPhase(n){ G.phase=n; renderSteps(n); }
+
+// 电压读数模型（简化稳态：有通路即有电压）
+function readVoltage(pt){
+  if(!G.breakerOn) return 0;
+  switch(pt){
+    case 'panel': return 240;
+    case 'j1':    return 240;
+    case 'j2':    return G.faultFixed?240:0;   // 故障点：J2 进线端子松动
+    case 'outlet':return G.faultFixed?240:0;
+    default: return 0;
+  }
+}
+function isLive(pt){ return readVoltage(pt)>0; }
+
+// ---------------- 注册互动物 ----------------
+function registerInteractables(){
+  reg(E.bpRoll,{ id:'bp', label:'电气图纸 E-101',
+    prompt:()=> G.phase===0 ? '按 <b>E</b> 展开图纸' : '按 <b>E</b> 重新查看图纸',
+    use(){ openModal('bp'); }});
+  reg(E.book,{ id:'book', label:'C-10 学徒手册',
+    prompt:()=>'按 <b>E</b> 翻阅教材（随时可按 <b>B</b>）',
+    use(){ toggleBook(); }});
+  reg(E.fryer,{ id:'fryer', label:'商用油炸锅',
+    prompt(){ if(G.phase===1) return '按 <b>E</b> 查看铭牌并计算负载';
+      if(G.phase>=7) return '油炸锅运行中 · 240V 5kW';
+      if(G.phase===0) return '先去吧台看图纸（工单第 1 步）';
+      return ''; },
+    use(){ if(G.phase===1) openModal('calc');
+      else if(G.phase===0) toast('先看图纸','师傅说：动手之前先动眼。去吧台展开 E-101。','');
+    }});
+  reg(E.panel,{ id:'panel', label:'配电箱 LP-1',
+    prompt(){
+      if(G.phase===2 && tool===3) return G.wireNext===0? '按 <b>左键</b> 从这里起线' : '';
+      if(G.phase===3) return '按 <b>E</b> 安装 30A 断路器并合闸';
+      if(G.phase===5 && G.breakerOn) return '按 <b>E</b> 断开断路器（先断电再检修！）';
+      if(G.phase===5 && !G.breakerOn && G.faultFixed) return '按 <b>E</b> 重新合闸';
+      if(G.phase===6 && !G.breakerOn) return '按 <b>E</b> 合闸送电';
+      return 'LP-1 · 120/240V 单相三线';
+    },
+    use(){
+      if(G.phase===3){
+        G.breakerOn=true;
+        E.breakerSlot.material=new THREE.MeshStandardMaterial({color:0xff6a00,roughness:.5});
+        setDiningPower(true); setKitchenPower(false);
+        toast('合闸','照明回路 C-1 正常点亮……但厨房 C-3 回路没电！设备指示灯不亮。','排障开始：分段电压测量法（教材第④章）');
+        gotoPhase(4); setTool(2);
+        return;
+      }
+      if(G.phase===5 && G.breakerOn){
+        G.breakerOn=false; setDiningPower(true); /* C-1 独立回路保持亮 */
+        toast('安全操作 ✓','检修前断开断路器并验电确认——LOTO（上锁挂牌）思想，C-10 安全题必考。','');
+        return;
+      }
+      if((G.phase===5||G.phase===6) && !G.breakerOn && G.faultFixed){
+        G.breakerOn=true; setKitchenPower(true);
+        toast('通电成功','C-3 回路 240V 正常，油炸锅指示灯点亮。门口来了位戴黄帽子的人……','');
+        E.inspector.visible=true; gotoPhase(6);
+        return;
+      }
+      if(G.phase===5 && !G.breakerOn && !G.faultFixed){
+        toast('已断电','现在去 J2 接线盒：先拆盖板，再紧固松动的端子（螺丝刀 5）。','');
+      }
+    }});
+  reg(E.j1,{ id:'j1', label:'接线盒 J1',
+    prompt(){
+      if(G.phase===2 && tool===3) return G.wireNext===3? '按 <b>左键</b> 接入 J1' : (G.wireNext<3?'先从配电箱起线':'');
+      if(tool===2) return '验电笔检测中…';
+      if(tool===2||tool===4) return '';
+      return '接线盒 J1';
+    },
+    use(){}});
+  const j2opt={ id:'j2', label:'接线盒 J2',
+    prompt(){
+      if(G.phase===2 && tool===3) return G.wireNext===4? '按 <b>左键</b> 接入 J2' : '';
+      if(G.phase===5){
+        if(G.breakerOn) return '⚠️ 先回配电箱断电！';
+        if(!G.j2Open && tool===4) return '按 <b>E</b> 拆下盖板';
+        if(G.j2Open && tool===4 && !G.faultFixed) return '按 <b>E</b> 紧固松动端子';
+        if(!G.j2Open) return '切到螺丝刀 <b>[5]</b> 拆盖板';
+      }
+      return '接线盒 J2';
+    },
+    use(){
+      if(G.phase!==5) return;
+      if(G.breakerOn){ toast('危险 ✗','带电紧固端子？师傅的扳手已经飞过来了。先断电！','OSHA / LOTO'); G.misses++; return; }
+      if(tool!==4){ return; }
+      if(!G.j2Open){ G.j2Open=true; E.j2cover.position.y=.45; E.j2cover.position.x=1.1; E.j2cover.rotation.x=1.4;
+        toast('发现问题','J2 进线端子松动——线头只挂了半圈，接触电阻大，电压全压降在这里。','典型故障：Loose Termination');
+        return; }
+      if(!G.faultFixed){ G.faultFixed=true;
+        toast('修复完成 ✓','端子按规范扭矩紧固。回配电箱合闸验证。','');
+        E.j2cover.position.set(0.6,2.7,-6.26); E.j2cover.rotation.x=0; G.j2Open=false;
+      }
+    }};
+  reg(E.j2,j2opt); E.j2cover.userData.ia=j2opt;
+  reg(E.outlet,{ id:'outlet', label:'设备插座盒',
+    prompt(){
+      if(G.phase===2 && tool===3) return G.wireNext===6? '按 <b>左键</b> 完成终端接线' : '';
+      return '油炸锅专用插座 · NEMA 6-30';
+    },
+    use(){}});
+  reg(E.inspector,{ id:'insp', label:'检查员 Rodriguez',
+    prompt:()=> G.phase===6? '按 <b>E</b> 接受验收问询' : '',
+    use(){ if(G.phase===6) openModal('insp'); }});
+}
+
+// 万用表测试点映射
+const TESTPOINTS=[
+  {pt:'panel', obj:()=>E.panel},
+  {pt:'j1', obj:()=>E.j1},
+  {pt:'j2', obj:()=>E.j2},
+  {pt:'outlet', obj:()=>E.outlet},
+];
+function aimTestPoint(){
+  raycaster.setFromCamera(center,camera);
+  const hits=raycaster.intersectObjects(allMeshes,false);
+  for(const h of hits){
+    const ia=h.object.userData.ia; if(!ia) continue;
+    const tp=TESTPOINTS.find(t=>t.pt===ia.id || (ia.id==='panel'&&t.pt==='panel'));
+    return tp? tp.pt : null;
+  }
+  return null;
+}
+
+// ---------------- 鼠标左键：工具动作 ----------------
+addEventListener('mousedown',e=>{
+  if(!locked || e.button!==0) return;
+  // 万用表测量
+  if(tool===2){
+    const pt=aimTestPoint();
+    if(!pt){ meterShow('-- --','未接触测试点'); return; }
+    const v=readVoltage(pt);
+    meterShow(v.toFixed(1)+' V', 'V AC · '+({panel:'配电箱 LP-1 出线端',j1:'接线盒 J1',j2:'接线盒 J2',outlet:'设备插座'}[pt]));
+    if(G.phase===4){
+      if(pt==='j2'&&v===0&&!G.faultFound){
+        G.faultFound=true;
+        toast('排障成功 🔍','配电箱 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ 故障锁定在 J1—J2 段（J2 端子）。','口诀：有压到哪里，故障在下一段');
+        gotoPhase(5);
+      } else if(pt!=='j2'&&v>0){
+        toast('读数记录','此点 '+v+'V，正常。继续向负载侧测。','');
+      }
+    }
+    return;
+  }
+  // 布线
+  if(tool===3 && G.phase===2){
+    const ia=pickAim(); if(!ia) return;
+    // 依次点击 电源侧→负载侧：配电箱 → J1 → J2 → 插座，中间管路自动补全
+    const targets={panel:0, j1:3, j2:4, outlet:6};
+    if(!(ia.id in targets)) return;
+    const targetNode=targets[ia.id];
+    const need=nextTargetNode();
+    if(targetNode<need) return;            // 已接好的节点，忽略
+    if(targetNode!==need){
+      toast('顺序错误','布线要从电源侧开始：配电箱 → J1 → J2 → 插座。','现场规范：先固定管路，再穿线'); G.misses++; return;
+    }
+    while(G.wireNext<targetNode){ addConduit(WIRE_PATH[G.wireNext],WIRE_PATH[G.wireNext+1]); G.wireNext++; }
+    if(ia.id==='panel'){ G.wireNextStarted=true;
+      toast('起线','从 LP-1 引出 10 AWG ×3（两火一地）。','240V 设备：L1+L2+EGC，无中性线'); }
+    if(G.wireNext===6){
+      toast('布线完成 ✓','线管固定、穿线、终端压接完成。下一步：装断路器、合闸。','');
+      gotoPhase(3); setTool(0);
+    }
+    return;
+  }
+});
+function nextTargetNode(){
+  if(!G.wireNextStarted) return 0;
+  if(G.wireNext<3) return 3;
+  if(G.wireNext<4) return 4;
+  return 6;
+}
+
+// ---------------- 答题系统（图纸/计算/验收共用） ----------------
+const ANSWERS={bp:2,c1:1,c2:2,c3:2,i1:1,i2:2,i3:3};
+const FEEDBACK={
+  bp:{ok:'正确。大功率固定厨房设备必须走<b>专用回路（Individual Branch Circuit）</b>，不与照明、插座共用。本工单即新增 C-3。',
+      no:'再想想——油炸锅 5kW，与照明或普通插座共用会怎样？翻教材 <a onclick="openBookChapter(2)">第③章 · 专用回路</a>。'},
+  c1:{ok:'I = 5000W ÷ 240V ≈ <b>20.8A</b>。',no:'用 I = P ÷ V。功率 5000W，电压 240V。见 <a onclick="openBookChapter(1)">第②章</a>。'},
+  c2:{ok:'连续负载 ×125%：20.8 × 1.25 ≈ 26A → 取不小于 26A 的标准规格 = <b>30A</b>。',
+      no:'连续负载（≥3小时）必须按 125% 取保护值，再向上取标准规格。见 <a onclick="openBookChapter(1)">第②章</a>。'},
+  c3:{ok:'30A 断路器 → 铜线 <b>10 AWG</b>（载流量 30A）。导线载流量必须 ≥ 断路器额定。',
+      no:'断路器保护的是导线：导线载流量 ≥ 30A 才行。查 <a onclick="openBookChapter(1)">第②章载流量表</a>。'},
+  i1:{ok:'NEC 210.8(B)：商用厨房 125V 15/20A 插座必须 <b>GFCI</b> 保护。',no:'水电共存区域，保护的是「人」。见 <a onclick="openBookChapter(2)">第③章</a>。'},
+  i2:{ok:'<b>80%</b>——与 125% 规则互为倒数表述。',no:'提示：125% 规则换个说法。见 <a onclick="openBookChapter(2)">第③章</a>。'},
+  i3:{ok:'EGC = <b>绿色或裸铜</b>。白色是接地中性线，别混。',no:'白色留给中性线，黑/红是火线。见 <a onclick="openBookChapter(0)">第①章</a>。'},
+};
+const solved={};
+document.querySelectorAll('.opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{
+    const q=opt.dataset.q, v=+opt.dataset.v;
+    if(solved[q]) return;
+    const target=document.getElementById(q+'-fb');
+    if(v===ANSWERS[q]){
+      opt.classList.add('right'); solved[q]=true;
+      target.className='fb ok'; target.innerHTML='✓ '+FEEDBACK[q].ok;
+      onSolved(q);
+    }else{
+      opt.classList.add('wrong'); G.misses++;
+      target.className='fb no'; target.innerHTML='✗ '+FEEDBACK[q].no;
+      setTimeout(()=>opt.classList.remove('wrong'),400);
+    }
+  });
+});
+function onSolved(q){
+  if(q==='bp'){ document.getElementById('bp-done').disabled=false; }
+  if(q==='c1'){ document.getElementById('calc-q2').style.display='block'; }
+  if(q==='c2'){ document.getElementById('calc-q3').style.display='block'; }
+  if(q==='c3'){ const b=document.getElementById('calc-done'); b.style.display='inline-block'; b.disabled=false; }
+  if(['i1','i2','i3'].every(k=>solved[k])){ document.getElementById('insp-done').disabled=false; }
+}
+document.getElementById('bp-done').onclick=()=>{
+  closeModal('bp');
+  if(G.phase===0){ gotoPhase(1);
+    toast('考点入档 · 专用回路','图纸阅读完成。下一步：去厨房东侧的油炸锅看铭牌。','C-10 笔试：图例识别 / 回路规划'); }
+};
+document.getElementById('calc-done').onclick=()=>{
+  closeModal('calc');
+  if(G.phase===1){ G.hasWire=true; gotoPhase(2); setTool(3);
+    toast('材料齐了','10 AWG 铜线 ×3 + 30A 双极断路器已领取。装备线缆工具，从配电箱（西墙）开始，依次点击：配电箱 → J1 → J2 → 插座。','考点：125% 规则 / NEC 310.16'); }
+};
+document.getElementById('insp-done').onclick=()=>{
+  closeModal('insp'); gotoPhase(7);
+  const dt=Math.round((Date.now()-G.t0)/1000);
+  document.getElementById('stat-time').textContent=String(Math.floor(dt/60)).padStart(2,'0')+':'+String(dt%60).padStart(2,'0');
+  document.getElementById('stat-miss').textContent=G.misses;
+  document.getElementById('stat-book').textContent=bookOpens;
+  openModal('cert');
+};
+
+// ---------------- E 键互动 ----------------
+addEventListener('keydown',e=>{
+  if(e.code!=='KeyE'||!locked) return;
+  if(aimed&&aimed.use) aimed.use();
+});
+
+// ---------------- 主循环 ----------------
+const testerTip=document.getElementById('tester-tip');
+const crosshair=document.getElementById('crosshair');
+let started=false;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),.05);
+  movePlayer(dt);
+  // 准星瞄准
+  if(locked){
+    aimed=pickAim();
+    if(aimed){
+      const p=typeof aimed.prompt==='function'? aimed.prompt() : aimed.prompt;
+      if(p){ showPrompt(p); crosshair.classList.add('hot'); }
+      else { hidePrompt(); crosshair.classList.remove('hot'); }
+    }else{ hidePrompt(); crosshair.classList.remove('hot'); }
+    // 验电笔实时提示
+    if(tool===1){
+      const pt=aimed? aimed.id : null;
+      const known=['panel','j1','j2','outlet'].includes(pt);
+      if(known){
+        const live=isLive(pt);
+        testerTip.className=live?'live':'dead';
+        testerTip.textContent=live?'⚡ 带电 LIVE — 小心':'○ 无电 DEAD';
+        testerTip.style.display='block';
+      } else testerTip.style.display='none';
+    } else testerTip.style.display='none';
+  }
+  // 检查员小幅呼吸感
+  if(E.inspector&&E.inspector.visible){ E.inspector.position.y=Math.sin(performance.now()*.0018)*.015; }
+  renderer.render(scene,camera);
+}
+
+// ---------------- 启动 ----------------
+buildRoom(); buildDining(); buildKitchen(); buildElectrical(); buildLights();
+scene.traverse(o=>{ if(o.isMesh) allMeshes.push(o); });   // 一次性收集所有 Mesh 供 raycasting 使用
+registerInteractables();
+setDiningPower(false); setKitchenPower(false);
+renderSteps(0);
+document.getElementById('start-btn').onclick=()=>{
+  document.getElementById('start').style.display='none';
+  started=true; G.t0=Date.now();
+  canvas.requestPointerLock();
+};
+animate();
+</script>
+</body>
+</html>
