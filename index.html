@@ -457,26 +457,29 @@ addEventListener('resize', ()=>{
 renderer.setSize(innerWidth, innerHeight);
 
 // ---------------- 材质库 ----------------
+// Lambert：漫反射（无高光计算），Phong：有光泽面（金属/台面），Basic：纯自发光不受光照影响
+const lam = c => new THREE.MeshLambertMaterial({color:c});
+const pho = (c,s=50) => new THREE.MeshPhongMaterial({color:c, shininess:s});
 const M = {
-  floorWood : new THREE.MeshStandardMaterial({color:0x6e4a2f, roughness:.85}),
-  floorTile : new THREE.MeshStandardMaterial({color:0x8b9094, roughness:.6, metalness:.1}),
-  wall      : new THREE.MeshStandardMaterial({color:0x9c4a3c, roughness:.95}),
-  wainscot  : new THREE.MeshStandardMaterial({color:0x3a2d22, roughness:.9}),
-  ceil      : new THREE.MeshStandardMaterial({color:0x2a2d31, roughness:1}),
-  counter   : new THREE.MeshStandardMaterial({color:0x4a3424, roughness:.7}),
-  counterTop: new THREE.MeshStandardMaterial({color:0xd8d3c8, roughness:.4}),
-  steel     : new THREE.MeshStandardMaterial({color:0xb9bdc2, roughness:.35, metalness:.75}),
-  steelDark : new THREE.MeshStandardMaterial({color:0x6f7479, roughness:.4, metalness:.7}),
-  tableTop  : new THREE.MeshStandardMaterial({color:0x7c553a, roughness:.6}),
-  black     : new THREE.MeshStandardMaterial({color:0x1b1d20, roughness:.8}),
-  red       : new THREE.MeshStandardMaterial({color:0x8c2f2f, roughness:.8}),
-  panelGray : new THREE.MeshStandardMaterial({color:0xc6cad0, roughness:.4, metalness:.5}),
-  jbox      : new THREE.MeshStandardMaterial({color:0x9aa0a8, roughness:.5, metalness:.6}),
-  conduit   : new THREE.MeshStandardMaterial({color:0xc77b3f, roughness:.35, metalness:.8}),
-  paper     : new THREE.MeshStandardMaterial({color:0xeae4d4, roughness:.9}),
-  bookRed   : new THREE.MeshStandardMaterial({color:0xa83232, roughness:.7}),
-  glassWin  : new THREE.MeshStandardMaterial({color:0x1f2a36, roughness:.1, metalness:.3, emissive:0x0a1622}),
-  vest      : new THREE.MeshStandardMaterial({color:0xff6a00, roughness:.8}),
+  floorWood : lam(0x6e4a2f),
+  floorTile : pho(0x8b9094, 20),
+  wall      : lam(0x9c4a3c),
+  wainscot  : lam(0x3a2d22),
+  ceil      : lam(0x2a2d31),
+  counter   : lam(0x4a3424),
+  counterTop: pho(0xd8d3c8, 40),
+  steel     : pho(0xb9bdc2, 80),
+  steelDark : pho(0x6f7479, 60),
+  tableTop  : lam(0x7c553a),
+  black     : lam(0x1b1d20),
+  red       : lam(0x8c2f2f),
+  panelGray : pho(0xc6cad0, 50),
+  jbox      : pho(0x9aa0a8, 40),
+  conduit   : pho(0xc77b3f, 60),
+  paper     : lam(0xeae4d4),
+  bookRed   : lam(0xa83232),
+  glassWin  : new THREE.MeshPhongMaterial({color:0x1f2a36, shininess:90, emissive:0x0a1622}),
+  vest      : lam(0xff6a00),
 };
 const box = (w,h,d,m)=> new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
 const cyl = (rt,rb,h,m,seg=14)=> new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m);
@@ -568,7 +571,7 @@ function buildElectrical(){
   const pdoor=box(.5,.78,.03,M.panelGray); pdoor.position.z=.07; panel.add(pdoor);
   const label=box(.3,.08,.005,M.paper); label.position.set(0,.32,.09); panel.add(label);
   // 新断路器空位（初始为暗槽，安装后变橙）
-  E.breakerSlot=box(.09,.16,.05,new THREE.MeshStandardMaterial({color:0x2a2d31,roughness:.6}));
+  E.breakerSlot=box(.09,.16,.05,new THREE.MeshLambertMaterial({color:0x2a2d31}));
   E.breakerSlot.position.set(0,-.02,.085); panel.add(E.breakerSlot);
   // 已有断路器排
   for(let i=0;i<4;i++){ const b=box(.08,.05,.04,M.black); b.position.set(-.12+(i%2)*.24,.16-Math.floor(i/2)*.09,.085); panel.add(b); }
@@ -580,8 +583,8 @@ function buildElectrical(){
   const fb=box(1.0,.95,.85,M.steel); fb.position.y=.475; fb.castShadow=true; fryer.add(fb);
   const basketWell=box(.8,.08,.6,M.black); basketWell.position.y=.99; fryer.add(basketWell);
   const ctrl=box(1.0,.22,.1,M.steelDark); ctrl.position.set(0,.85,.48); fryer.add(ctrl);
-  E.fryerLamp=new THREE.Mesh(new THREE.SphereGeometry(.035,10,10),
-    new THREE.MeshStandardMaterial({color:0x441111,emissive:0x000000}));
+  E.fryerLamp=new THREE.Mesh(new THREE.SphereGeometry(.035,8,8),
+    new THREE.MeshBasicMaterial({color:0x441111}));
   E.fryerLamp.position.set(.32,.85,.54); fryer.add(E.fryerLamp);
   const plate=box(.34,.2,.005,M.paper); plate.position.set(-.2,.62,.43); fryer.add(plate); // 铭牌
   fryer.position.set(3.4,0,-5.85); scene.add(fryer); E.fryer=fryer;
@@ -603,10 +606,10 @@ function buildElectrical(){
 
   // ---- 检查员（门口，锥体小人 + 安全帽）----
   const insp=new THREE.Group();
-  const ibody=cyl(.16,.26,1.15,new THREE.MeshStandardMaterial({color:0x3a4148})); ibody.position.set(0,.62,0); insp.add(ibody);
+  const ibody=cyl(.16,.26,1.15,new THREE.MeshLambertMaterial({color:0x3a4148})); ibody.position.set(0,.62,0); insp.add(ibody);
   const ivest=cyl(.17,.17,.3,M.vest,12); ivest.position.set(0,1.0,0); insp.add(ivest);
-  const ihead=new THREE.Mesh(new THREE.SphereGeometry(.14,12,12),new THREE.MeshStandardMaterial({color:0xd9a877})); ihead.position.set(0,1.36,0); insp.add(ihead);
-  const ihat=new THREE.Mesh(new THREE.SphereGeometry(.16,12,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xf2c230})); ihat.position.set(0,1.41,0); insp.add(ihat);
+  const ihead=new THREE.Mesh(new THREE.SphereGeometry(.14,10,10),new THREE.MeshLambertMaterial({color:0xd9a877})); ihead.position.set(0,1.36,0); insp.add(ihead);
+  const ihat=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0xf2c230})); ihat.position.set(0,1.41,0); insp.add(ihat);
   const board=box(.22,.3,.02,M.paper); board.position.set(.22,.95,.12); board.rotation.x=-.4; insp.add(board);
   insp.position.set(1.6,0,5.4); insp.rotation.y=Math.PI+.4; insp.visible=false;
   scene.add(insp); E.inspector=insp;
@@ -615,38 +618,41 @@ function buildElectrical(){
 // ---------------- 灯光 ----------------
 const L = {};
 function buildLights(){
-  scene.add(new THREE.AmbientLight(0x303a44, .55));                         // 应急底光
-  const moon=new THREE.DirectionalLight(0x6f86a8,.25); moon.position.set(4,8,6); scene.add(moon);
-  L.work=new THREE.PointLight(0xffc878,.85,9,2); L.work.position.set(-1,2.2,-1); L.work.castShadow=true; scene.add(L.work); // 临时工作灯（吧台上方）
-  const lampMeshes=[];
+  scene.add(new THREE.AmbientLight(0x303a44, .65));
+  const moon=new THREE.DirectionalLight(0x6f86a8,.3); moon.position.set(4,8,6); scene.add(moon);
+  // 工作灯（吧台上方）— 1 个 PointLight
+  L.work=new THREE.PointLight(0xffc878,.85,9,2); L.work.position.set(-1,2.2,-1); scene.add(L.work);
+  const wl=new THREE.Mesh(new THREE.SphereGeometry(.09,8,8),new THREE.MeshBasicMaterial({color:0xffc878}));
+  wl.position.set(-1,2.2,-1); scene.add(wl);
+  // 4 个吊灯（视觉保留，光源合并为 1 个区域 PointLight）
   L.pendants=[];
   for(const [x,z] of [[-5,2.2],[-1.7,3.4],[1.7,2.2],[5,3.4]]){
     const cord=cyl(.012,.012,.5,M.black,6); cord.position.set(x,3.15,z); scene.add(cord);
-    const shade=cyl(.16,.26,.18,new THREE.MeshStandardMaterial({color:0x274145,roughness:.5}),16);
+    const shade=cyl(.16,.26,.18,new THREE.MeshLambertMaterial({color:0x274145}),12);
     shade.position.set(x,2.85,z); scene.add(shade);
-    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.05,10,10),
-      new THREE.MeshStandardMaterial({color:0x554433,emissive:0x000000}));
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.05,8,8),new THREE.MeshBasicMaterial({color:0x554433}));
     bulb.position.set(x,2.78,z); scene.add(bulb);
-    const pl=new THREE.PointLight(0xffb066,0,7,2); pl.position.set(x,2.7,z); scene.add(pl);
-    L.pendants.push({pl,bulb});
+    L.pendants.push({bulb});
   }
-  // 厨房灯管
+  L.diningLight=new THREE.PointLight(0xffb066,0,14,2); L.diningLight.position.set(0,2.7,3.0); scene.add(L.diningLight);
+  // 3 个厨房灯管（视觉保留，光源合并为 1 个区域 PointLight）
   L.kitchenBars=[];
   for(const x of [-4,0,3.4]){
-    const bar=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.18),
-      new THREE.MeshStandardMaterial({color:0x3a3f44,emissive:0x000000}));
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.18),new THREE.MeshBasicMaterial({color:0x3a3f44}));
     bar.position.set(x,3.3,-4.2); scene.add(bar);
-    const pl=new THREE.PointLight(0xeaf2ff,0,8,2); pl.position.set(x,3.1,-4.2); scene.add(pl);
-    L.kitchenBars.push({pl,bar});
+    L.kitchenBars.push({bar});
   }
-  // 工作灯本体
-  const wl=new THREE.Mesh(new THREE.SphereGeometry(.09,10,10),new THREE.MeshStandardMaterial({color:0xffc878,emissive:0xffa040,emissiveIntensity:.9}));
-  wl.position.set(-1,2.2,-1); scene.add(wl);
+  L.kitchenLight=new THREE.PointLight(0xeaf2ff,0,14,2); L.kitchenLight.position.set(0,3.1,-4.5); scene.add(L.kitchenLight);
 }
-function setDiningPower(on){ for(const p of L.pendants){ p.pl.intensity=on?.75:0; p.bulb.material.emissive.setHex(on?0xffb066:0); p.bulb.material.emissiveIntensity=on?1.4:0; } }
-function setKitchenPower(on){ for(const k of L.kitchenBars){ k.pl.intensity=on?.9:0; k.bar.material.emissive.setHex(on?0xdfe9ff:0); k.bar.material.emissiveIntensity=on?1.2:0; }
-  E.fryerLamp.material.emissive.setHex(on?0x33ff66:0); E.fryerLamp.material.emissiveIntensity=on?2:0;
-  E.fryerLamp.material.color.setHex(on?0x1c5a2e:0x441111); }
+function setDiningPower(on){
+  L.diningLight.intensity=on?.75:0;
+  for(const p of L.pendants){ p.bulb.material.color.setHex(on?0xffb066:0x554433); }
+}
+function setKitchenPower(on){
+  L.kitchenLight.intensity=on?.9:0;
+  for(const k of L.kitchenBars){ k.bar.material.color.setHex(on?0xdfe9ff:0x3a3f44); }
+  E.fryerLamp.material.color.setHex(on?0x55ff88:0x441111);
+}
 
 // ---------------- 线管（玩家布线时逐段生成） ----------------
 // 预设路径节点（沿西墙上行 → 沿后墙横走 → 下到插座）
@@ -846,7 +852,7 @@ function registerInteractables(){
     use(){
       if(G.phase===3){
         G.breakerOn=true;
-        E.breakerSlot.material=new THREE.MeshStandardMaterial({color:0xff6a00,roughness:.5});
+        E.breakerSlot.material=new THREE.MeshLambertMaterial({color:0xff6a00});
         setDiningPower(true); setKitchenPower(false);
         toast('合闸','照明回路 C-1 正常点亮……但厨房 C-3 回路没电！设备指示灯不亮。','排障开始：分段电压测量法（教材第④章）');
         gotoPhase(4); setTool(2);
