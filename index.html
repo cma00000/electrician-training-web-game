@@ -194,10 +194,10 @@
 <!-- 工单 -->
 <div id="workorder">
   <div class="clip"></div>
-  <header><h1>工 单 #1042</h1><span>BAYSIDE ELECTRIC</span></header>
-  <div class="job">客户：海湾小馆（装修中）<br>任务：为新购商用油炸锅增设专用回路，并通过竣工验收。</div>
+  <header><h1 id="wo-title">工 单 #1042</h1><span>BAYSIDE ELECTRIC</span></header>
+  <div class="job" id="wo-job">客户：海湾小馆（装修中）<br>任务：为新购商用油炸锅增设专用回路，并通过竣工验收。</div>
   <div id="steps"></div>
-  <footer>C-10 APPRENTICE · 按 <b>B</b> 查阅随身教材</footer>
+  <footer id="wo-footer">C-10 APPRENTICE · 按 <b>B</b> 查阅随身教材</footer>
 </div>
 
 <!-- 工具栏 -->
@@ -207,7 +207,7 @@
 <div id="meter">
   <div class="brand"><span>FIELDPRO</span><span>DMM-87</span></div>
   <div class="lcd"><div class="v" id="meter-v">-- --</div><div class="l" id="meter-l">V AC · 对准测试点按 左键 测量</div></div>
-  <div class="hint">分段测量：从电源侧向负载侧逐点测，电压消失处的上游即故障点。</div>
+  <div class="hint" id="meter-hint">分段测量：从电源侧向负载侧逐点测，电压消失处的上游即故障点。</div>
 </div>
 
 <div id="toasts"></div>
@@ -998,13 +998,7 @@ function movePlayer(dt){
 }
 
 // ---------------- 工具系统 ----------------
-const TOOLS=[
-  {name:'徒手',   key:'1'},
-  {name:'验电笔', key:'2'},
-  {name:'万用表', key:'3'},
-  {name:'线缆',   key:'4'},
-  {name:'螺丝刀', key:'5'},
-];
+const TOOLS=[{key:'1'},{key:'2'},{key:'3'},{key:'4'},{key:'5'}];
 let tool=0;
 const toolbar=document.getElementById('toolbar');
 const toolbarSlots=[];
@@ -1015,19 +1009,19 @@ function initToolbar(){
     const d=document.createElement('div'); d.className='slot'+(i===0?' active':'');
     const keyEl=document.createElement('div'); keyEl.className='key'; keyEl.textContent=`[${t.key}]`;
     const cv=makeThumbnail(THUMB_BUILDERS[i]);
-    const nameEl=document.createElement('div'); nameEl.className='name'; nameEl.textContent=t.name;
+    const nameEl=document.createElement('div'); nameEl.className='name'; nameEl.textContent=T('tools')[i]||'';
     d.appendChild(keyEl); d.appendChild(cv); d.appendChild(nameEl);
     d.onclick=()=>setTool(i); toolbar.appendChild(d); toolbarSlots.push(d);
   });
 }
 function setTool(i){
-  if(i===3 && !G.hasWire){ toast('材料未到','先完成负载计算，才能从货车上领 10 AWG 线缆。',''); return; }
+  if(i===3 && !G.hasWire){ toast(T('no_wire_tag'),T('no_wire'),''); return; }
   if(cursorGroups[tool]) cursorGroups[tool].visible=false;
   tool=i;
   if(cursorGroups[tool]) cursorGroups[tool].visible=true;
   toolbarSlots.forEach((s,j)=>s.classList.toggle('active',j===i));
   document.getElementById('meter').style.display=i===2?'block':'none';
-  if(i!==2) meterShow('-- --','V AC · 对准测试点按 左键 测量');
+  if(i!==2) meterShow('-- --',T('meter_lcd'));
 }
 function meterShow(v,l){ document.getElementById('meter-v').textContent=v; document.getElementById('meter-l').textContent=l; }
 
@@ -1055,17 +1049,8 @@ function pickAim(){
 }
 
 // ---------------- HUD：工单 / 提示 / 考点 ----------------
-const STEPS=[
-  '到吧台阅读电气图纸 E-101',
-  '查看油炸锅铭牌，完成负载计算',
-  '布设 C-3 回路：配电箱 → J1 → J2 → 设备插座',
-  '回配电箱装上 30A 断路器并合闸',
-  '厨房回路无电！用万用表分段排查',
-  '修复故障点（先断电，再用螺丝刀紧固）',
-  '到门口找检查员 Rodriguez 验收',
-];
 function renderSteps(cur){
-  document.getElementById('steps').innerHTML = STEPS.map((s,i)=>
+  document.getElementById('steps').innerHTML = T('steps').map((s,i)=>
     `<div class="step ${i<cur?'done':i===cur?'now':''}"><div class="box">${i<cur?'✓':''}</div><div>${s}</div></div>`).join('');
 }
 const promptEl=document.getElementById('prompt');
@@ -1127,94 +1112,170 @@ function readVoltage(pt){
 function isLive(pt){ return readVoltage(pt)>0; }
 
 // ---------------- 注册互动物 ----------------
+
+// ── i18n string table ─────────────────────────────────────────────────────
+const STRINGS={
+zh:{
+  tools:['徒手','验电笔','万用表','线缆','螺丝刀'],
+  steps:['到吧台阅读电气图纸 E-101','查看油炸锅铭牌，完成负载计算','布设 C-3 回路：配电箱 → J1 → J2 → 设备插座','回配电箱装上 30A 断路器并合闸','厨房回路无电！用万用表分段排查','修复故障点（先断电，再用螺丝刀紧固）','到门口找检查员 Rodriguez 验收'],
+  wo_title:'工 单 #1042',wo_job:'客户：海湾小馆（装修中）<br>任务：为新购商用油炸锅增设专用回路，并通过竣工验收。',
+  wo_footer:'C-10 APPRENTICE · 按 <b>B</b> 查阅随身教材',
+  hintbar:'<b>WASD</b> 移动 · <b>鼠标</b> 视角 · <b>E</b> 互动 · <b>1-5</b> 工具 · <b>B</b> 教材 · <b>Esc</b> 释放鼠标',
+  p_bp:'按 <b>E</b> 展开图纸',p_bp2:'按 <b>E</b> 重新查看图纸',
+  p_book:'按 <b>E</b> 翻阅教材（随时可按 <b>B</b>）',
+  p_fryer1:'按 <b>E</b> 查看铭牌并计算负载',p_fryer7:'油炸锅运行中 · 240V 5kW',p_fryer0:'先去吧台看图纸（工单第 1 步）',
+  p_pan_start:'按 <b>左键</b> 从这里起线',p_pan_brk:'按 <b>E</b> 安装 30A 断路器并合闸',
+  p_pan_off:'按 <b>E</b> 断开断路器（先断电再检修！）',p_pan_on:'按 <b>E</b> 重新合闸',p_pan_fin:'按 <b>E</b> 合闸送电',
+  p_pan_info:'LP-1 · 120/240V 单相三线',
+  p_j1_go:'先从配电箱起线',p_j1:'按 <b>左键</b> 接入 J1',p_j1_lbl:'接线盒 J1',
+  p_j2:'按 <b>左键</b> 接入 J2',p_j2_warn:'⚠️ 先回配电箱断电！',p_j2_open:'按 <b>E</b> 拆下盖板',
+  p_j2_fix:'按 <b>E</b> 紧固松动端子',p_j2_tool:'切到螺丝刀 <b>[5]</b> 拆盖板',p_j2_lbl:'接线盒 J2',
+  p_out:'按 <b>左键</b> 完成终端接线',p_out_lbl:'油炸锅专用插座 · NEMA 6-30',
+  p_insp:'按 <b>E</b> 接受验收问询',
+  meter_hint:'分段测量：从电源侧向负载侧逐点测，电压消失处的上游即故障点。',
+  meter_vac:'V AC · ',meter_no:'未接触测试点',meter_lcd:'V AC · 对准测试点按 左键 测量',
+  meter_pts:{panel:'配电箱 LP-1 出线端',j1:'接线盒 J1',j2:'接线盒 J2',outlet:'设备插座'},
+  tl:'⚡ 带电 LIVE — 小心',td:'○ 无电 DEAD',
+  no_wire_tag:'材料未到',no_wire:'先完成负载计算，才能从货车上领 10 AWG 线缆。',
+  wire_start_tag:'起线',wire_start:'从 LP-1 引出 10 AWG ×3（两火一地）。',wire_start_ref:'240V 设备：L1+L2+EGC，无中性线',
+  wire_done_tag:'布线完成 ✓',wire_done:'线管固定、穿线、终端压接完成。下一步：装断路器、合闸。',
+  wrong_ord_tag:'顺序错误',wrong_ord:'布线要从电源侧开始：配电箱 → J1 → J2 → 插座。',wrong_ord_ref:'现场规范：先固定管路，再穿线',
+  brk_on_tag:'合闸',brk_on:'照明回路 C-1 正常点亮……但厨房 C-3 回路没电！设备指示灯不亮。',brk_on_ref:'排障开始：分段电压测量法（教材第④章）',
+  loto_tag:'安全操作 ✓',loto:'检修前断开断路器并验电确认——LOTO（上锁挂牌）思想，C-10 安全题必考。',
+  pwr_tag:'通电成功',pwr:'C-3 回路 240V 正常，油炸锅指示灯点亮。门口来了位戴黄帽子的人……',
+  pwr_off_tag:'已断电',pwr_off:'现在去 J2 接线盒：先拆盖板，再紧固松动的端子（螺丝刀 5）。',
+  j2_dng_tag:'危险 ✗',j2_dng:'带电紧固端子？师傅的扳手已经飞过来了。先断电！',j2_dng_ref:'OSHA / LOTO',
+  j2_open_tag:'发现问题',j2_open:'J2 进线端子松动——线头只挂了半圈，接触电阻大，电压全压降在这里。',j2_open_ref:'典型故障：Loose Termination',
+  j2_fix_tag:'修复完成 ✓',j2_fix:'端子按规范扭矩紧固。回配电箱合闸验证。',
+  fault_tag:'排障成功 🔍',fault:'配电箱 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ 故障锁定在 J1—J2 段（J2 端子）。',fault_ref:'口诀：有压到哪里，故障在下一段',
+  reading:'此点 {{v}}V，正常。继续向负载侧测。',reading_tag:'读数记录',
+  mat_tag:'材料齐了',mat:'10 AWG 铜线 ×3 + 30A 双极断路器已领取。装备线缆工具，从配电箱（西墙）开始，依次点击：配电箱 → J1 → J2 → 插座。',mat_ref:'考点：125% 规则 / NEC 310.16',
+  see_draw_tag:'先看图纸',see_draw:'师傅说：动手之前先动眼。去吧台展开 E-101。',
+  bp_done_tag:'考点入档 · 专用回路',bp_done:'图纸阅读完成。下一步：去厨房东侧的油炸锅看铭牌。',bp_done_ref:'C-10 笔试：图例识别 / 回路规划',
+},
+en:{
+  tools:['Hand','Volt Tester','Multimeter','Wire','Screwdriver'],
+  steps:['Read electrical plan E-101 at the counter','Check fryer nameplate & complete load calculation','Run C-3 circuit: Panel → J1 → J2 → Equipment outlet','Return to panel, install 30A breaker & energize','Kitchen circuit dead! Troubleshoot with multimeter','Fix the fault (de-energize first, tighten terminal)','Find Inspector Rodriguez at the door for sign-off'],
+  wo_title:'WORK ORDER #1042',wo_job:'Client: Bayside Bistro (Under Renovation)<br>Task: Install a dedicated circuit for a new 5kW commercial deep fryer and pass final inspection.',
+  wo_footer:'C-10 APPRENTICE · Press <b>B</b> for field manual',
+  hintbar:'<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Interact · <b>1–5</b> Tools · <b>B</b> Manual · <b>Esc</b> Release',
+  p_bp:'Press <b>E</b> to open plans',p_bp2:'Press <b>E</b> to review plans',
+  p_book:'Press <b>E</b> to open field manual (or press <b>B</b>)',
+  p_fryer1:'Press <b>E</b> to read nameplate & calculate load',p_fryer7:'Fryer running · 240V 5kW',p_fryer0:'Read the plans first (Step 1)',
+  p_pan_start:'Left-click to start wire run here',p_pan_brk:'Press <b>E</b> to install 30A breaker & energize',
+  p_pan_off:'Press <b>E</b> to open breaker (de-energize before work!)',p_pan_on:'Press <b>E</b> to close breaker',p_pan_fin:'Press <b>E</b> to close breaker & send power',
+  p_pan_info:'LP-1 · 120/240V Single-Phase 3-Wire',
+  p_j1_go:'Start at the panel first',p_j1:'Left-click to connect J1',p_j1_lbl:'Junction Box J1',
+  p_j2:'Left-click to connect J2',p_j2_warn:'⚠️ Go de-energize the panel first!',p_j2_open:'Press <b>E</b> to remove cover',
+  p_j2_fix:'Press <b>E</b> to tighten loose terminal',p_j2_tool:'Switch to screwdriver <b>[5]</b> to remove cover',p_j2_lbl:'Junction Box J2',
+  p_out:'Left-click to complete termination',p_out_lbl:'Equipment outlet · NEMA 6-30',
+  p_insp:'Press <b>E</b> to accept inspection',
+  meter_hint:'Voltage-drop method: test from source toward load. Where voltage disappears is downstream of the fault.',
+  meter_vac:'V AC · ',meter_no:'No test point in range',meter_lcd:'V AC · Aim at test point and left-click',
+  meter_pts:{panel:'Panel LP-1 output',j1:'Junction Box J1',j2:'Junction Box J2',outlet:'Equipment outlet'},
+  tl:'⚡ LIVE — Caution',td:'○ DEAD — Safe',
+  no_wire_tag:'No Materials Yet',no_wire:'Complete the load calculation to claim 10 AWG wire from the truck.',
+  wire_start_tag:'Wire Run Started',wire_start:'Pulling 10 AWG ×3 from LP-1 (L1 + L2 + EGC).',wire_start_ref:'240V equipment: L1+L2+EGC, no neutral',
+  wire_done_tag:'Wiring Complete ✓',wire_done:'Conduit secured, wire pulled, terminals crimped. Next: install breaker & energize.',
+  wrong_ord_tag:'Wrong Order',wrong_ord:'Wire from source to load: Panel → J1 → J2 → Outlet.',wrong_ord_ref:'Best practice: secure conduit before pulling wire',
+  brk_on_tag:'Breaker Closed',brk_on:'Dining lighting (C-1) is on… but kitchen circuit C-3 is dead! Fryer indicator not lit.',brk_on_ref:'Troubleshoot: voltage-drop method (Manual Ch.4)',
+  loto_tag:'Safe Work ✓',loto:'Breaker opened and tested dead before work — LOTO (Lockout/Tagout), required on C-10 safety exam.',
+  pwr_tag:'Power Restored',pwr:'C-3 reads 240V. Fryer indicator lit. Someone in a yellow hard-hat just walked in…',
+  pwr_off_tag:'Power Off',pwr_off:'Now go to J2: remove cover, then tighten the loose terminal (Screwdriver [5]).',
+  j2_dng_tag:'Danger ✗',j2_dng:"Tightening a live terminal? Your mentor's wrench just flew past your head. De-energize first!",j2_dng_ref:'OSHA / LOTO',
+  j2_open_tag:'Fault Found',j2_open:'J2 inlet terminal is loose — only half-wrapped. High contact resistance = full voltage drop here.',j2_open_ref:'Classic fault: Loose Termination',
+  j2_fix_tag:'Repaired ✓',j2_fix:'Terminal tightened to spec torque. Return to panel to re-energize and verify.',
+  fault_tag:'Fault Isolated 🔍',fault:'Panel 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ Fault is in the J1–J2 segment (J2 terminal).',fault_ref:'Rule: voltage present up to the fault, zero after it',
+  reading:'This point reads {{v}}V — normal. Continue toward the load.',reading_tag:'Meter Reading',
+  mat_tag:'Materials Ready',mat:'10 AWG copper ×3 + 30A 2-pole breaker claimed. Equip the Wire tool, start at the panel (west wall): Panel → J1 → J2 → Outlet.',mat_ref:'Key: 125% rule / NEC 310.16',
+  see_draw_tag:'Plans First',see_draw:"Mentor says: eyes before hands. Head to the counter and open E-101.",
+  bp_done_tag:'Exam Point · Dedicated Circuit',bp_done:'Plan reading complete. Next: check the fryer nameplate in the kitchen.',bp_done_ref:'C-10 written: symbol reading / circuit planning',
+}};
+function T(k){ return (STRINGS[_lang]||STRINGS.zh)[k]; }
 function registerInteractables(){
   reg(E.bpRoll,{ id:'bp', label:'电气图纸 E-101',
-    prompt:()=> G.phase===0 ? '按 <b>E</b> 展开图纸' : '按 <b>E</b> 重新查看图纸',
+    prompt:()=> G.phase===0 ? T('p_bp') : T('p_bp2'),
     use(){ openModal('bp'); }});
   reg(E.book,{ id:'book', label:'C-10 学徒手册',
-    prompt:()=>'按 <b>E</b> 翻阅教材（随时可按 <b>B</b>）',
+    prompt:()=>T('p_book'),
     use(){ toggleBook(); }});
   reg(E.fryer,{ id:'fryer', label:'商用油炸锅',
-    prompt(){ if(G.phase===1) return '按 <b>E</b> 查看铭牌并计算负载';
-      if(G.phase>=7) return '油炸锅运行中 · 240V 5kW';
-      if(G.phase===0) return '先去吧台看图纸（工单第 1 步）';
-      return ''; },
+    prompt(){ if(G.phase===1) return T('p_fryer1'); if(G.phase>=7) return T('p_fryer7'); if(G.phase===0) return T('p_fryer0'); return ''; },
     use(){ if(G.phase===1) openModal('calc');
-      else if(G.phase===0) toast('先看图纸','师傅说：动手之前先动眼。去吧台展开 E-101。','');
+      else if(G.phase===0) toast(T('see_draw_tag'),T('see_draw'),'');
     }});
   reg(E.panel,{ id:'panel', label:'配电箱 LP-1',
     prompt(){
-      if(G.phase===2 && tool===3) return !G.wireNextStarted? '按 <b>左键</b> 从这里起线' : '';
-      if(G.phase===3) return '按 <b>E</b> 安装 30A 断路器并合闸';
-      if(G.phase===5 && G.breakerOn) return '按 <b>E</b> 断开断路器（先断电再检修！）';
-      if(G.phase===5 && !G.breakerOn && G.faultFixed) return '按 <b>E</b> 重新合闸';
-      if(G.phase===6 && !G.breakerOn) return '按 <b>E</b> 合闸送电';
-      return 'LP-1 · 120/240V 单相三线';
+      if(G.phase===2 && tool===3) return !G.wireNextStarted? T('p_pan_start') : '';
+      if(G.phase===3) return T('p_pan_brk');
+      if(G.phase===5 && G.breakerOn) return T('p_pan_off');
+      if(G.phase===5 && !G.breakerOn && G.faultFixed) return T('p_pan_on');
+      if(G.phase===6 && !G.breakerOn) return T('p_pan_fin');
+      return T('p_pan_info');
     },
     use(){
       if(G.phase===3){
         G.breakerOn=true;
         E.breakerSlot.material=new THREE.MeshLambertMaterial({color:0xff6a00});
         setDiningPower(true); setKitchenPower(false);
-        toast('合闸','照明回路 C-1 正常点亮……但厨房 C-3 回路没电！设备指示灯不亮。','排障开始：分段电压测量法（教材第④章）');
+        toast(T('brk_on_tag'),T('brk_on'),T('brk_on_ref'));
         gotoPhase(4); setTool(2);
         return;
       }
       if(G.phase===5 && G.breakerOn){
         G.breakerOn=false; setDiningPower(true); /* C-1 独立回路保持亮 */
-        toast('安全操作 ✓','检修前断开断路器并验电确认——LOTO（上锁挂牌）思想，C-10 安全题必考。','');
+        toast(T('loto_tag'),T('loto'),'');
         return;
       }
       if((G.phase===5||G.phase===6) && !G.breakerOn && G.faultFixed){
         G.breakerOn=true; setKitchenPower(true);
-        toast('通电成功','C-3 回路 240V 正常，油炸锅指示灯点亮。门口来了位戴黄帽子的人……','');
+        toast(T('pwr_tag'),T('pwr'),'');
         E.inspector.visible=true; gotoPhase(6);
         return;
       }
       if(G.phase===5 && !G.breakerOn && !G.faultFixed){
-        toast('已断电','现在去 J2 接线盒：先拆盖板，再紧固松动的端子（螺丝刀 5）。','');
+        toast(T('pwr_off_tag'),T('pwr_off'),'');
       }
     }});
   reg(E.j1,{ id:'j1', label:'接线盒 J1',
     prompt(){
-      if(G.phase===2 && tool===3){ if(!G.wireNextStarted) return '先从配电箱起线'; if(G.wireNext<3) return '按 <b>左键</b> 接入 J1'; return ''; }
+      if(G.phase===2 && tool===3){ if(!G.wireNextStarted) return T('p_j1_go'); if(G.wireNext<3) return T('p_j1'); return ''; }
       if(tool===2) return '验电笔检测中…';
-      if(tool===2||tool===4) return '';
-      return '接线盒 J1';
+      if(tool===2||tool===4) return ''; return T('p_j1_lbl');
     },
     use(){}});
   const j2opt={ id:'j2', label:'接线盒 J2',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===3? '按 <b>左键</b> 接入 J2' : '';
+      if(G.phase===2 && tool===3) return G.wireNext===3? T('p_j2') : '';
       if(G.phase===5){
-        if(G.breakerOn) return '⚠️ 先回配电箱断电！';
-        if(!G.j2Open && tool===4) return '按 <b>E</b> 拆下盖板';
-        if(G.j2Open && tool===4 && !G.faultFixed) return '按 <b>E</b> 紧固松动端子';
-        if(!G.j2Open) return '切到螺丝刀 <b>[5]</b> 拆盖板';
+        if(G.breakerOn) return T('p_j2_warn');
+        if(!G.j2Open && tool===4) return T('p_j2_open');
+        if(G.j2Open && tool===4 && !G.faultFixed) return T('p_j2_fix');
+        if(!G.j2Open) return T('p_j2_tool');
       }
-      return '接线盒 J2';
+      return T('p_j2_lbl');
     },
     use(){
       if(G.phase!==5) return;
-      if(G.breakerOn){ toast('危险 ✗','带电紧固端子？师傅的扳手已经飞过来了。先断电！','OSHA / LOTO'); G.misses++; return; }
+      if(G.breakerOn){ toast(T('j2_dng_tag'),T('j2_dng'),T('j2_dng_ref')); G.misses++; return; }
       if(tool!==4){ return; }
       if(!G.j2Open){ G.j2Open=true; E.j2cover.position.y=.45; E.j2cover.position.x=1.1; E.j2cover.rotation.x=1.4;
-        toast('发现问题','J2 进线端子松动——线头只挂了半圈，接触电阻大，电压全压降在这里。','典型故障：Loose Termination');
+        toast(T('j2_open_tag'),T('j2_open'),T('j2_open_ref'));
         return; }
       if(!G.faultFixed){ G.faultFixed=true;
-        toast('修复完成 ✓','端子按规范扭矩紧固。回配电箱合闸验证。','');
+        toast(T('j2_fix_tag'),T('j2_fix'),'');
         E.j2cover.position.set(0.6,2.7,-6.26); E.j2cover.rotation.x=0; G.j2Open=false;
       }
     }};
   reg(E.j2,j2opt); E.j2cover.userData.ia=j2opt;
   reg(E.outlet,{ id:'outlet', label:'设备插座盒',
     prompt(){
-      if(G.phase===2 && tool===3) return G.wireNext===4? '按 <b>左键</b> 完成终端接线' : '';
-      return '油炸锅专用插座 · NEMA 6-30';
+      if(G.phase===2 && tool===3) return G.wireNext===4? T('p_out') : '';
+      return T('p_out_lbl');
     },
     use(){}});
   reg(E.inspector,{ id:'insp', label:'检查员 Rodriguez',
-    prompt:()=> G.phase===6? '按 <b>E</b> 接受验收问询' : '',
+    prompt:()=> G.phase===6? T('p_insp') : '',
     use(){ if(G.phase===6) openModal('insp'); }});
 }
 
@@ -1242,16 +1303,16 @@ addEventListener('mousedown',e=>{
   // 万用表测量
   if(tool===2){
     const pt=aimTestPoint();
-    if(!pt){ meterShow('-- --','未接触测试点'); return; }
+    if(!pt){ meterShow('-- --',T('meter_no')); return; }
     const v=readVoltage(pt);
-    meterShow(v.toFixed(1)+' V', 'V AC · '+({panel:'配电箱 LP-1 出线端',j1:'接线盒 J1',j2:'接线盒 J2',outlet:'设备插座'}[pt]));
+    meterShow(v.toFixed(1)+' V', T('meter_vac')+(T('meter_pts')[pt]||pt));
     if(G.phase===4){
       if(pt==='j2'&&v===0&&!G.faultFound){
         G.faultFound=true;
-        toast('排障成功 🔍','配电箱 240V ✓ → J1 240V ✓ → J2 0V ✗ ⇒ 故障锁定在 J1—J2 段（J2 端子）。','口诀：有压到哪里，故障在下一段');
+        toast(T('fault_tag'),T('fault'),T('fault_ref'));
         gotoPhase(5);
       } else if(pt!=='j2'&&v>0){
-        toast('读数记录','此点 '+v+'V，正常。继续向负载侧测。','');
+        toast(T('reading_tag'),T('reading').replace('{{v}}',v),'');
       }
     }
     return;
@@ -1266,13 +1327,13 @@ addEventListener('mousedown',e=>{
     const need=nextTargetNode();
     if(targetNode<need) return;            // 已接好的节点，忽略
     if(targetNode!==need){
-      toast('顺序错误','布线要从电源侧开始：配电箱 → J1 → J2 → 插座。','现场规范：先固定管路，再穿线'); G.misses++; return;
+      toast(T('wrong_ord_tag'),T('wrong_ord'),T('wrong_ord_ref')); G.misses++; return;
     }
     while(G.wireNext<targetNode){ addConduit(WIRE_PATH[G.wireNext],WIRE_PATH[G.wireNext+1]); G.wireNext++; }
     if(ia.id==='panel'){ G.wireNextStarted=true;
-      toast('起线','从 LP-1 引出 10 AWG ×3（两火一地）。','240V 设备：L1+L2+EGC，无中性线'); }
+      toast(T('wire_start_tag'),T('wire_start'),T('wire_start_ref')); }
     if(G.wireNext===6){
-      toast('布线完成 ✓','线管固定、穿线、终端压接完成。下一步：装断路器、合闸。','');
+      toast(T('wire_done_tag'),T('wire_done'),'');
       gotoPhase(3); setTool(0);
     }
     return;
@@ -1326,12 +1387,12 @@ function onSolved(q){
 document.getElementById('bp-done').onclick=()=>{
   closeModal('bp');
   if(G.phase===0){ gotoPhase(1);
-    toast('考点入档 · 专用回路','图纸阅读完成。下一步：去厨房东侧的油炸锅看铭牌。','C-10 笔试：图例识别 / 回路规划'); }
+    toast(T('bp_done_tag'),T('bp_done'),T('bp_done_ref')); }
 };
 document.getElementById('calc-done').onclick=()=>{
   closeModal('calc');
   if(G.phase===1){ G.hasWire=true; gotoPhase(2); setTool(3);
-    toast('材料齐了','10 AWG 铜线 ×3 + 30A 双极断路器已领取。装备线缆工具，从配电箱（西墙）开始，依次点击：配电箱 → J1 → J2 → 插座。','考点：125% 规则 / NEC 310.16'); }
+    toast(T('mat_tag'),T('mat'),T('mat_ref')); }
 };
 document.getElementById('insp-done').onclick=()=>{
   closeModal('insp'); gotoPhase(7);
@@ -1386,7 +1447,7 @@ function animate(){
       if(known){
         const live=isLive(pt);
         testerTip.className=live?'live':'dead';
-        testerTip.textContent=live?'⚡ 带电 LIVE — 小心':'○ 无电 DEAD';
+        testerTip.textContent=live?T('tl'):T('td');
         testerTip.style.display='block';
       }else testerTip.style.display='none';
     }else testerTip.style.display='none';
@@ -1442,6 +1503,23 @@ const LANG_DATA = {
   }
 };
 let _lang = 'zh';
+
+function applyGameLang(){
+  // Static DOM elements
+  const el=id=>document.getElementById(id);
+  if(el('wo-title')) el('wo-title').textContent=T('wo_title');
+  if(el('wo-job'))   el('wo-job').innerHTML=T('wo_job');
+  if(el('wo-footer'))el('wo-footer').innerHTML=T('wo_footer');
+  if(el('hint-bar')) el('hint-bar').innerHTML=T('hintbar');
+  if(el('meter-hint'))el('meter-hint').textContent=T('meter_hint');
+  if(el('meter-l'))  el('meter-l').textContent=T('meter_lcd');
+  // Re-render work order steps
+  if(typeof G!=='undefined') renderSteps(G.phase);
+  // Update toolbar tool names
+  document.querySelectorAll('#toolbar .slot .name').forEach((n,i)=>{
+    const names=T('tools'); if(names[i]) n.textContent=names[i];
+  });
+}
 function applyLang(l){
   _lang = l;
   const d = LANG_DATA[l];
@@ -1454,6 +1532,7 @@ function applyLang(l){
   document.getElementById('start-note').textContent = d.note;
   document.getElementById('start-panel').classList.toggle('lang-en', l==='en');
   document.querySelectorAll('.lang-opt').forEach(b=> b.classList.toggle('active', b.dataset.lang===l));
+  applyGameLang();
 }
 document.querySelectorAll('.lang-opt').forEach(b=> b.addEventListener('click', ()=> applyLang(b.dataset.lang)));
 
