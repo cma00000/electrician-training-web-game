@@ -512,7 +512,7 @@ function buildDining(){
   for(const [x,z] of tables){
     const g=new THREE.Group();
     const top=cyl(.65,.65,.06,M.tableTop,20); top.position.y=.95; top.castShadow=true; g.add(top);
-    g.add(Object.assign(cyl(.06,.09,.92,M.black),{position:new THREE.Vector3(0,.47,0)}));
+    const post=cyl(.06,.09,.92,M.black); post.position.set(0,.47,0); g.add(post);
     const base=cyl(.3,.34,.05,M.black,16); base.position.y=.03; g.add(base);
     for(let i=0;i<3;i++){
       const a=i/3*Math.PI*2 + x; // 角度随桌子错开
@@ -538,8 +538,8 @@ function buildDining(){
   // 吧台凳
   for(let i=0;i<4;i++){
     const st=new THREE.Group();
-    st.add(Object.assign(cyl(.2,.2,.06,M.red,16),{position:new THREE.Vector3(0,.78,0)}));
-    st.add(Object.assign(cyl(.045,.06,.76,M.steelDark),{position:new THREE.Vector3(0,.39,0)}));
+    const seat=cyl(.2,.2,.06,M.red,16); seat.position.set(0,.78,0); st.add(seat);
+    const stem=cyl(.045,.06,.76,M.steelDark); stem.position.set(0,.39,0); st.add(stem);
     st.position.set(-4.2+i*2.1,0,-.1); scene.add(st);
   }
 }
@@ -603,10 +603,10 @@ function buildElectrical(){
 
   // ---- 检查员（门口，锥体小人 + 安全帽）----
   const insp=new THREE.Group();
-  insp.add(Object.assign(cyl(.16,.26,1.15,new THREE.MeshStandardMaterial({color:0x3a4148})),{position:new THREE.Vector3(0,.62,0)}));
-  insp.add(Object.assign(cyl(.17,.17,.3,M.vest,12),{position:new THREE.Vector3(0,1.0,0)}));
-  insp.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.14,12,12),new THREE.MeshStandardMaterial({color:0xd9a877})),{position:new THREE.Vector3(0,1.36,0)}));
-  insp.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.16,12,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xf2c230})),{position:new THREE.Vector3(0,1.41,0)}));
+  const ibody=cyl(.16,.26,1.15,new THREE.MeshStandardMaterial({color:0x3a4148})); ibody.position.set(0,.62,0); insp.add(ibody);
+  const ivest=cyl(.17,.17,.3,M.vest,12); ivest.position.set(0,1.0,0); insp.add(ivest);
+  const ihead=new THREE.Mesh(new THREE.SphereGeometry(.14,12,12),new THREE.MeshStandardMaterial({color:0xd9a877})); ihead.position.set(0,1.36,0); insp.add(ihead);
+  const ihat=new THREE.Mesh(new THREE.SphereGeometry(.16,12,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xf2c230})); ihat.position.set(0,1.41,0); insp.add(ihat);
   const board=box(.22,.3,.02,M.paper); board.position.set(.22,.95,.12); board.rotation.x=-.4; insp.add(board);
   insp.position.set(1.6,0,5.4); insp.rotation.y=Math.PI+.4; insp.visible=false;
   scene.add(insp); E.inspector=insp;
