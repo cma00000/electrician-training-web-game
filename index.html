@@ -1612,7 +1612,7 @@ function applyGameLang(){
   if(s('bp-qtag'))    s('bp-qtag').textContent=T('bp_qtag');
   if(s('bp-qtext'))   s('bp-qtext').textContent=T('bp_qtext');
   if(s('bp-done'))    s('bp-done').textContent=T('bp_done_btn');
-  T('bp_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="bp"][data-v="\${i}"]\`);if(el)el.textContent=txt;});
+  T('bp_opts').forEach((txt,i)=>{const el=document.querySelector(`.opt[data-q="bp"][data-v="${i}"]`);if(el)el.textContent=txt;});
   // -- calc modal --
   if(s('calc-title')) s('calc-title').textContent=T('calc_title');
   if(s('calc-close')) s('calc-close').textContent=T('calc_close');
@@ -1623,7 +1623,7 @@ function applyGameLang(){
   if(s('c3-qtag'))    s('c3-qtag').textContent=T('c3_qtag');
   if(s('c3-qtext'))   s('c3-qtext').textContent=T('c3_qtext');
   if(s('calc-done'))  s('calc-done').textContent=T('calc_done_btn');
-  ['c1','c2','c3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="\${q}"][data-v="\${i}"]\`);if(el)el.textContent=txt;}));
+  ['c1','c2','c3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(`.opt[data-q="${q}"][data-v="${i}"]`);if(el)el.textContent=txt;}));
   // -- book modal --
   if(s('book-title')) s('book-title').textContent=T('book_title');
   if(s('book-close')) s('book-close').textContent=T('book_close');
@@ -1640,7 +1640,7 @@ function applyGameLang(){
   if(s('i3-qtag'))    s('i3-qtag').textContent=T('i3_qtag');
   if(s('i3-qtext'))   s('i3-qtext').textContent=T('i3_qtext');
   if(s('insp-done'))  s('insp-done').textContent=T('insp_done_btn');
-  ['i1','i2','i3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(\`.opt[data-q="\${q}"][data-v="\${i}"]\`);if(el)el.textContent=txt;}));
+  ['i1','i2','i3'].forEach(q=>T(q+'_opts').forEach((txt,i)=>{const el=document.querySelector(`.opt[data-q="${q}"][data-v="${i}"]`);if(el)el.textContent=txt;}));
   // -- cert modal --
   if(s('cert-h2'))    s('cert-h2').textContent=T('cert_h2');
   if(s('cert-sub'))   s('cert-sub').textContent=T('cert_sub');
