@@ -141,15 +141,39 @@
   #cert ul{text-align:left;display:inline-block;margin:8px 0 0;font-size:13px;line-height:1.9;color:#4a443a}
   #cert .mbtn{background:#2a2620;color:var(--paper)}
 
-  /* start overlay */
-  #start{position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse at 50% 35%,#222b33 0%,#0d1013 70%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}
-  #start .badge{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--orange);border:1px solid var(--orange-dim);padding:5px 14px;border-radius:3px;margin-bottom:18px}
-  #start h1{font-size:34px;letter-spacing:.06em;margin-bottom:8px}
-  #start p{color:var(--txt-dim);font-size:14px;max-width:520px;line-height:1.8}
-  #start .keys{display:flex;gap:18px;margin:26px 0;font-family:var(--mono);font-size:12px;color:var(--txt-dim);flex-wrap:wrap;justify-content:center}
-  #start .keys b{color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-bottom-width:3px;border-radius:5px;padding:3px 9px;margin-right:6px}
-  #start .mbtn{font-size:16px;padding:13px 38px}
-  #start .mobile-note{margin-top:16px;font-size:12px;color:#6d7680}
+  /* ===== start overlay ===== */
+  #start{position:fixed;inset:0;z-index:30;background:#060809;display:flex;align-items:center;justify-content:center}
+  #start-bg{position:absolute;inset:0;pointer-events:none}
+  #start-panel{
+    position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;
+    padding:44px 60px;width:min(580px,90vw);
+    background:rgba(8,11,16,.82);
+    border:1px solid rgba(255,106,0,.18);
+    border-radius:8px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 100px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(8px);
+    animation:panelPulse 4s ease-in-out infinite
+  }
+  @keyframes panelPulse{
+    0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 100px rgba(0,0,0,.92),0 0 24px rgba(255,106,0,.04) inset}
+    50%{box-shadow:0 0 0 1px rgba(255,255,255,.04),0 40px 100px rgba(0,0,0,.92),0 0 44px rgba(255,106,0,.11) inset}
+  }
+  .start-eyebrow{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--txt-dim);margin-bottom:20px}
+  .s-tag{color:var(--orange);border:1px solid var(--orange-dim);padding:3px 10px;border-radius:2px;letter-spacing:.18em}
+  .s-sep{color:var(--line)}
+  .start-bolt{font-size:44px;line-height:1;margin:2px 0 10px;filter:drop-shadow(0 0 14px rgba(255,106,0,.7));animation:boltPulse 2.5s ease-in-out infinite}
+  @keyframes boltPulse{
+    0%,100%{filter:drop-shadow(0 0 10px rgba(255,106,0,.5))}
+    50%{filter:drop-shadow(0 0 26px rgba(255,106,0,.98))}
+  }
+  #start h1{font-size:36px;letter-spacing:.2em;margin-bottom:6px;text-shadow:0 2px 32px rgba(255,106,0,.28)}
+  .start-sub{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--orange-dim);margin-bottom:18px;opacity:.85}
+  #start p{color:var(--txt-dim);font-size:13.5px;max-width:440px;line-height:1.85}
+  #start .keys{display:flex;gap:12px;margin:22px 0;font-family:var(--mono);font-size:11px;color:var(--txt-dim);flex-wrap:wrap;justify-content:center}
+  #start .keys b{color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-bottom-width:3px;border-radius:4px;padding:2px 8px;margin-right:4px}
+  #start .mbtn{font-size:15px;padding:12px 40px;letter-spacing:.1em;transition:box-shadow .2s,transform .2s}
+  #start .mbtn:hover{box-shadow:0 0 22px rgba(255,106,0,.55);transform:translateY(-2px)}
+  #start .mobile-note{margin-top:14px;font-size:11px;color:#555c64}
 
   #hint-bar{position:fixed;bottom:16px;left:16px;font-family:var(--mono);font-size:11px;color:var(--txt-dim);z-index:5;background:rgba(20,24,28,.7);padding:6px 10px;border-radius:4px;line-height:1.7}
   #hint-bar b{color:var(--txt)}
@@ -185,14 +209,23 @@
 
 <!-- ===== 开场 ===== -->
 <div id="start">
-  <div class="badge">C-10 LICENSE TRAINING · VERTICAL SLICE</div>
-  <h1>学徒电工 · 餐厅工程</h1>
-  <p>海湾小馆正在装修，老板新买了一台 5kW 商用油炸锅。你的师傅把活儿交给了你：读图、算载、布线、排障、过验收——每一步都对应 C-10 考试的真实考点。</p>
-  <div class="keys">
-    <span><b>W A S D</b>移动</span><span><b>鼠标</b>视角</span><span><b>E</b>互动</span><span><b>1–5</b>切换工具</span><span><b>B</b>教材</span>
+  <canvas id="start-bg"></canvas>
+  <div id="start-panel">
+    <div class="start-eyebrow">
+      <span class="s-tag">BAYSIDE ELECTRIC</span>
+      <span class="s-sep">·</span>
+      <span class="s-tag">C-10 TRAINING</span>
+    </div>
+    <div class="start-bolt">⚡</div>
+    <h1>学 徒 电 工</h1>
+    <div class="start-sub">RESTAURANT ELECTRICAL · 餐厅工程实训</div>
+    <p>海湾小馆正在装修，老板新买了一台 5kW 商用油炸锅。你的师傅把活儿交给了你：读图、算载、布线、排障、过验收——每一步都对应 C-10 考试的真实考点。</p>
+    <div class="keys">
+      <span><b>W A S D</b>移动</span><span><b>鼠标</b>视角</span><span><b>E</b>互动</span><span><b>1–5</b>切换工具</span><span><b>B</b>教材</span>
+    </div>
+    <button class="mbtn" id="start-btn">⚡ 开始上工</button>
+    <div class="mobile-note">需要键盘和鼠标，请在桌面浏览器中游玩</div>
   </div>
-  <button class="mbtn" id="start-btn">开始上工 →</button>
-  <div class="mobile-note">需要键盘和鼠标，请在桌面浏览器中游玩</div>
 </div>
 
 <!-- ===== 图纸 ===== -->
@@ -1336,6 +1369,272 @@ document.getElementById('start-btn').onclick=()=>{
   canvas.requestPointerLock();
 };
 animate();
+
+// ─── Landing page animated background ───────────────────────────────────────
+(function(){
+  const cv = document.getElementById('start-bg');
+  const ctx = cv.getContext('2d');
+  let W, H, cx, cy;
+
+  function resize(){
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    cx = W/2; cy = H/2;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ── Scale helper: world units → canvas px ──────────────────────────────
+  // Game room is roughly 14×12 units; we fit it into ~65% of the smaller dim
+  function scl(){ return Math.min(W,H) * 0.038; }
+
+  // ── Blueprint grid ──────────────────────────────────────────────────────
+  function drawGrid(){
+    const s = scl();
+    const minor = s, major = s * 5;
+    ctx.save();
+    // minor lines
+    ctx.strokeStyle = 'rgba(30,60,100,0.35)';
+    ctx.lineWidth = 0.5;
+    for(let x = (W/2) % minor; x < W; x += minor){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y = (H/2) % minor; y < H; y += minor){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // major lines
+    ctx.strokeStyle = 'rgba(40,90,160,0.5)';
+    ctx.lineWidth = 1;
+    for(let x = (W/2) % major; x < W; x += major){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y = (H/2) % major; y < H; y += major){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // ── Floor plan silhouette (world coords, centred on canvas) ────────────
+  // Shapes are approximate game footprints in world units, offset from centre
+  function wp(wx, wy){ const s=scl(); return [cx + wx*s, cy - wy*s]; }
+
+  function drawFloorPlan(){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(50,120,200,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6,4]);
+
+    // Outer restaurant walls  (≈14 × 12 units)
+    const corners = [[-7,-6],[7,-6],[7,6],[-7,6]];
+    ctx.beginPath();
+    ctx.moveTo(...wp(...corners[0]));
+    for(let i=1;i<corners.length;i++) ctx.lineTo(...wp(...corners[i]));
+    ctx.closePath(); ctx.stroke();
+
+    // Kitchen divider wall
+    ctx.beginPath(); ctx.moveTo(...wp(-7,-1)); ctx.lineTo(...wp(7,-1)); ctx.stroke();
+
+    // Dining tables (4 rectangles)
+    [[-3,3],[0,3],[3,3],[1.5,0.5]].forEach(([tx,ty])=>{
+      const [px,py]=wp(tx,ty); const sw=scl()*.9, sh=scl()*.55;
+      ctx.beginPath(); ctx.rect(px-sw/2, py-sh/2, sw, sh); ctx.stroke();
+    });
+
+    // Kitchen equipment outlines
+    // Counter / service bar
+    const [kx,ky]=wp(-5,-3.5); ctx.beginPath(); ctx.rect(kx, ky, scl()*2.5, scl()*.6); ctx.stroke();
+    // Fryer block
+    const [fx,fy]=wp(4,-4); ctx.beginPath(); ctx.rect(fx-scl()*.4,fy-scl()*.4,scl()*.8,scl()*.8); ctx.stroke();
+    // Electrical panel
+    const [ex,ey]=wp(-6.5,4.5); ctx.beginPath(); ctx.rect(ex,ey,scl()*.7,scl()*1.2); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ── Circuit path definitions ─────────────────────────────────────────────
+  // Each path is an array of [wx,wy] world points
+  const pathC1 = [ [-6.5,4.5],[-5,4.5],[-5,2],[3,2],[3,3],[0,3],[-3,3] ]; // lighting loop
+  const pathC3 = [ [-6.5,4.5],[-6,-1],[-4,-1],[-4,-3.5],[4,-3.5],[4,-4] ]; // power to fryer
+
+  function pathPoints(def){
+    return def.map(p => { const [x,y]=wp(...p); return {x,y}; });
+  }
+
+  // ── Animated dots ────────────────────────────────────────────────────────
+  // Each dot travels along the path using interpolated distance
+  function makeFlowDots(def, count, color){
+    const pts = pathPoints(def);
+    // pre-compute cumulative distances
+    const dists = [0];
+    for(let i=1;i<pts.length;i++){
+      const dx=pts[i].x-pts[i-1].x, dy=pts[i].y-pts[i-1].y;
+      dists.push(dists[i-1]+Math.sqrt(dx*dx+dy*dy));
+    }
+    const total = dists[dists.length-1];
+    const dots = [];
+    for(let i=0;i<count;i++) dots.push({ t: i/count });
+    return { pts, dists, total, dots, color };
+  }
+
+  const flowC1 = makeFlowDots(pathC1, 4, 'rgba(80,160,255,');
+  const flowC3 = makeFlowDots(pathC3, 4, 'rgba(255,120,20,');
+
+  function posOnPath(flow, t){
+    const dist = ((t % 1) + 1) % 1 * flow.total;
+    for(let i=1;i<flow.dists.length;i++){
+      if(flow.dists[i] >= dist){
+        const seg = flow.dists[i] - flow.dists[i-1];
+        const f = (dist - flow.dists[i-1]) / seg;
+        return {
+          x: flow.pts[i-1].x + f*(flow.pts[i].x-flow.pts[i-1].x),
+          y: flow.pts[i-1].y + f*(flow.pts[i].y-flow.pts[i-1].y)
+        };
+      }
+    }
+    return flow.pts[flow.pts.length-1];
+  }
+
+  function drawCircuitPath(def, color, dashed, t){
+    const pts = pathPoints(def);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash(dashed ? [8,5] : []);
+    ctx.shadowColor = color; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFlowDots(flow, speed, t){
+    flow.dots.forEach(d => {
+      const pos = posOnPath(flow, d.t + t * speed);
+      const alpha = 0.7 + 0.3 * Math.sin(t * 4 + d.t * 6.28);
+      ctx.save();
+      ctx.shadowColor = flow.color + '1)';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = flow.color + alpha.toFixed(2)+')';
+      ctx.beginPath(); ctx.arc(pos.x, pos.y, 3.5, 0, 6.28); ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // ── Pulsing nodes ────────────────────────────────────────────────────────
+  const nodes = [
+    { p: [-6.5,4.5], color: '#ff6a00', label: 'PANEL' },
+    { p: [-4,-1],    color: '#ff6a00', label: 'J-BOX 1' },
+    { p: [-4,-3.5],  color: '#ff6a00', label: 'J-BOX 2' },
+    { p: [4,-4],     color: '#ff6a00', label: 'FRYER' },
+    { p: [-5,2],     color: '#4ca8ff', label: 'C-1' },
+    { p: [3,3],      color: '#4ca8ff', label: 'TABLE' },
+  ];
+
+  function drawNodes(t){
+    nodes.forEach(n => {
+      const [x,y] = wp(...n.p);
+      const pulse = 0.5 + 0.5 * Math.sin(t * 2.5 + n.p[0] + n.p[1]);
+      ctx.save();
+      // outer ring
+      ctx.strokeStyle = n.color;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3 + 0.3 * pulse;
+      ctx.shadowColor = n.color; ctx.shadowBlur = 16 * pulse;
+      ctx.beginPath(); ctx.arc(x, y, 7 + 4*pulse, 0, 6.28); ctx.stroke();
+      // inner dot
+      ctx.globalAlpha = 0.8 + 0.2 * pulse;
+      ctx.fillStyle = n.color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 6.28); ctx.fill();
+      // label
+      ctx.globalAlpha = 0.5 + 0.2 * pulse;
+      ctx.fillStyle = n.color;
+      ctx.font = `bold ${Math.round(scl()*0.38)}px monospace`;
+      ctx.textAlign = 'left';
+      ctx.shadowBlur = 0;
+      ctx.fillText(n.label, x + 10, y + 4);
+      ctx.restore();
+    });
+  }
+
+  // ── Spark particles ──────────────────────────────────────────────────────
+  const sparks = Array.from({length:18}, ()=>({
+    x: Math.random(), y: Math.random(),
+    vx: (Math.random()-.5)*.0005, vy: (Math.random()-.5)*.0005,
+    life: Math.random(), size: 1+Math.random()*2,
+    color: Math.random()<0.5 ? 'rgba(255,106,0,' : 'rgba(80,160,255,'
+  }));
+
+  function drawSparks(t){
+    sparks.forEach(s => {
+      s.x = (s.x + s.vx + 1) % 1;
+      s.y = (s.y + s.vy + 1) % 1;
+      s.life = (s.life + 0.003) % 1;
+      const alpha = Math.sin(s.life * Math.PI) * 0.7;
+      if(alpha < 0.01) return;
+      ctx.save();
+      ctx.fillStyle = s.color + alpha.toFixed(2)+')';
+      ctx.shadowColor = s.color+'1)'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.size, 0, 6.28); ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // ── Scanlines ────────────────────────────────────────────────────────────
+  function drawScanlines(){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.07)';
+    for(let y=0; y<H; y+=4){ ctx.fillRect(0,y,W,2); }
+    ctx.restore();
+  }
+
+  // ── Vignette ─────────────────────────────────────────────────────────────
+  function drawVignette(){
+    const grad = ctx.createRadialGradient(cx,cy, Math.min(W,H)*.25, cx,cy, Math.max(W,H)*.75);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(4,6,8,0.82)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ── Corner labels ────────────────────────────────────────────────────────
+  function drawLabels(){
+    ctx.save();
+    ctx.font = `${Math.round(scl()*0.36)}px monospace`;
+    ctx.fillStyle = 'rgba(50,120,200,0.4)';
+    ctx.textAlign = 'left';
+    ctx.fillText('CIRCUIT C-1 · LIGHTING', 16, H-32);
+    ctx.fillStyle = 'rgba(255,106,0,0.4)';
+    ctx.fillText('CIRCUIT C-3 · POWER', 16, H-16);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(80,120,160,0.35)';
+    ctx.fillText('BAYSIDE ELECTRIC · TRAINING SIM', W-16, H-16);
+    ctx.restore();
+  }
+
+  // ── Main render loop ─────────────────────────────────────────────────────
+  let startEl = document.getElementById('start');
+  let animId;
+  function frame(ts){
+    if(!startEl || startEl.style.display==='none'){ return; }
+    const t = ts * 0.001;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#080b0e';
+    ctx.fillRect(0,0,W,H);
+
+    drawGrid();
+    drawFloorPlan();
+    drawCircuitPath(pathC1, 'rgba(60,130,255,0.55)', true,  t);
+    drawCircuitPath(pathC3, 'rgba(255,100,10,0.65)', false, t);
+    drawFlowDots(flowC1, 0.04, t);
+    drawFlowDots(flowC3, 0.06, t);
+    drawNodes(t);
+    drawSparks(t);
+    drawScanlines();
+    drawVignette();
+    drawLabels();
+
+    animId = requestAnimationFrame(frame);
+  }
+  animId = requestAnimationFrame(frame);
+
+  // Stop animating once game starts to save GPU
+  document.getElementById('start-btn').addEventListener('click', ()=>{
+    cancelAnimationFrame(animId);
+  });
+})();
 </script>
 </body>
 </html>
