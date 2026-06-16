@@ -1017,7 +1017,7 @@ function initToolbar(){
 function setTool(i){
   if(i===3 && !G.hasWire){ toast(T('no_wire_tag'),T('no_wire'),''); return; }
   if(cursorGroups[tool]) cursorGroups[tool].visible=false;
-  tool=i;
+  tool=i; SFX.click();
   if(cursorGroups[tool]) cursorGroups[tool].visible=true;
   toolbarSlots.forEach((s,j)=>s.classList.toggle('active',j===i));
   document.getElementById('meter').style.display=i===2?'block':'none';
@@ -1057,6 +1057,7 @@ const promptEl=document.getElementById('prompt');
 function showPrompt(html){ promptEl.innerHTML=html; promptEl.style.display='block'; }
 function hidePrompt(){ promptEl.style.display='none'; }
 function toast(tag,body,ref){
+  SFX.notify();
   const t=document.createElement('div'); t.className='toast';
   t.innerHTML=`<div class="tag">📌 ${tag}</div><div class="body">${body}</div>${ref?`<div class="ref">${ref}</div>`:''}`;
   document.getElementById('toasts').appendChild(t);
@@ -1065,11 +1066,11 @@ function toast(tag,body,ref){
 
 // ---------------- 模态框管理 ----------------
 const MODALS=['bp','calc','book','insp','cert'];
-function openModal(id){ document.getElementById(id).classList.add('open'); document.exitPointerLock&&document.exitPointerLock(); }
+function openModal(id){ document.getElementById(id).classList.add('open'); document.exitPointerLock&&document.exitPointerLock(); if(id==='cert') SFX.complete(); else SFX.paper(); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function closeAllModals(){ MODALS.forEach(closeModal); }
 function anyModalOpen(){ return MODALS.some(id=>document.getElementById(id).classList.contains('open')); }
-document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.dataset.close));
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{ SFX.click(); closeModal(b.dataset.close); });
 let bookOpens=0;
 function toggleBook(){
   const b=document.getElementById('book');
@@ -1289,6 +1290,70 @@ en:{
 }};
 let _lang = 'zh';
 function T(k){ return (STRINGS[_lang]||STRINGS.zh)[k]; }
+// ── Sound Effects (Web Audio API, procedural) ──────────────────
+const SFX=(()=>{
+  let ctx=null;
+  function ac(){
+    if(!ctx) ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(f,t,dur,vol=0.25,atk=0.005){
+    try{
+      const c=ac(),o=c.createOscillator(),g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type=t; o.frequency.value=f;
+      const n=c.currentTime;
+      g.gain.setValueAtTime(0,n);
+      g.gain.linearRampToValueAtTime(vol,n+atk);
+      g.gain.exponentialRampToValueAtTime(0.001,n+dur);
+      o.start(n); o.stop(n+dur+0.05);
+    }catch(e){}
+  }
+  function noise(dur,vol,lo,hi){
+    try{
+      const c=ac(),sz=Math.ceil(c.sampleRate*dur);
+      const buf=c.createBuffer(1,sz,c.sampleRate),d=buf.getChannelData(0);
+      for(let i=0;i<sz;i++) d[i]=Math.random()*2-1;
+      const src=c.createBufferSource(); src.buffer=buf;
+      const fl=c.createBiquadFilter(); fl.type='bandpass';
+      fl.frequency.value=(lo+hi)/2; fl.Q.value=0.7;
+      const g=c.createGain();
+      g.gain.setValueAtTime(vol,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+      src.connect(fl); fl.connect(g); g.connect(c.destination);
+      src.start(); src.stop(c.currentTime+dur);
+    }catch(e){}
+  }
+  return{
+    click(){ tone(900,'square',0.05,0.18); },
+    hover(){ tone(1400,'sine',0.035,0.06); },
+    paper(){ noise(0.18,0.06,2000,8000); tone(300,'sine',0.12,0.08); },
+    notify(){ tone(660,'sine',0.12,0.18); setTimeout(()=>tone(880,'sine',0.1,0.14),80); },
+    wire(){ noise(0.14,0.1,300,1200); tone(180,'sawtooth',0.12,0.12); },
+    correct(){ [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.22,0.28),i*90)); },
+    wrong(){ tone(160,'sawtooth',0.28,0.22); noise(0.2,0.07,80,300); },
+    breaker(){ noise(0.07,0.18,200,600); tone(120,'square',0.07,0.22); },
+    power(){
+      try{
+        const c=ac(),o=c.createOscillator(),g=c.createGain();
+        o.connect(g); g.connect(c.destination); o.type='sawtooth';
+        o.frequency.setValueAtTime(55,c.currentTime);
+        o.frequency.linearRampToValueAtTime(110,c.currentTime+0.6);
+        g.gain.setValueAtTime(0.18,c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.9);
+        o.start(); o.stop(c.currentTime+0.95);
+      }catch(e){}
+    },
+    screwdriver(){
+      [900,800,850,750,700].forEach((f,i)=>setTimeout(()=>tone(f,'sawtooth',0.06,0.12),i*55));
+    },
+    meter(){ tone(1100,'square',0.08,0.15); setTimeout(()=>tone(1100,'square',0.06,0.12),90); },
+    tester(live){ if(live) tone(1000,'square',0.15,0.2); else tone(300,'sine',0.2,0.18); },
+    complete(){ [523,659,784,880,1047].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.4,0.3-i*.02),i*130)); },
+  };
+})();
+
 function registerInteractables(){
   reg(E.bpRoll,{ id:'bp', label:'电气图纸 E-101',
     prompt:()=> G.phase===0 ? T('p_bp') : T('p_bp2'),
@@ -1315,6 +1380,7 @@ function registerInteractables(){
         G.breakerOn=true;
         E.breakerSlot.material=new THREE.MeshLambertMaterial({color:0xff6a00});
         setDiningPower(true); setKitchenPower(false);
+        SFX.breaker(); setTimeout(()=>SFX.power(),150);
         toast(T('brk_on_tag'),T('brk_on'),T('brk_on_ref'));
         gotoPhase(4); setTool(2);
         return;
@@ -1326,6 +1392,7 @@ function registerInteractables(){
       }
       if((G.phase===5||G.phase===6) && !G.breakerOn && G.faultFixed){
         G.breakerOn=true; setKitchenPower(true);
+        SFX.power();
         toast(T('pwr_tag'),T('pwr'),'');
         E.inspector.visible=true; gotoPhase(6);
         return;
@@ -1359,7 +1426,7 @@ function registerInteractables(){
       if(!G.j2Open){ G.j2Open=true; E.j2cover.position.y=.45; E.j2cover.position.x=1.1; E.j2cover.rotation.x=1.4;
         toast(T('j2_open_tag'),T('j2_open'),T('j2_open_ref'));
         return; }
-      if(!G.faultFixed){ G.faultFixed=true;
+      if(!G.faultFixed){ G.faultFixed=true; SFX.screwdriver();
         toast(T('j2_fix_tag'),T('j2_fix'),'');
         E.j2cover.position.set(0.6,2.7,-6.26); E.j2cover.rotation.x=0; G.j2Open=false;
       }
@@ -1401,7 +1468,7 @@ addEventListener('mousedown',e=>{
   if(tool===2){
     const pt=aimTestPoint();
     if(!pt){ meterShow('-- --',T('meter_no')); return; }
-    const v=readVoltage(pt);
+    const v=readVoltage(pt); SFX.meter();
     meterShow(v.toFixed(1)+' V', T('meter_vac')+(T('meter_pts')[pt]||pt));
     if(G.phase===4){
       if(pt==='j2'&&v===0&&!G.faultFound){
@@ -1427,6 +1494,7 @@ addEventListener('mousedown',e=>{
       toast(T('wrong_ord_tag'),T('wrong_ord'),T('wrong_ord_ref')); G.misses++; return;
     }
     while(G.wireNext<targetNode){ addConduit(WIRE_PATH[G.wireNext],WIRE_PATH[G.wireNext+1]); G.wireNext++; }
+    SFX.wire();
     if(ia.id==='panel'){ G.wireNextStarted=true;
       toast(T('wire_start_tag'),T('wire_start'),T('wire_start_ref')); }
     if(G.wireNext===6){
@@ -1453,11 +1521,11 @@ document.querySelectorAll('.opt').forEach(opt=>{
     if(solved[q]) return;
     const target=document.getElementById(q+'-fb');
     if(v===ANSWERS[q]){
-      opt.classList.add('right'); solved[q]=true;
+      opt.classList.add('right'); solved[q]=true; SFX.correct();
       target.className='fb ok'; target.innerHTML='✓ '+FEEDBACK[q].ok;
       onSolved(q);
     }else{
-      opt.classList.add('wrong'); G.misses++;
+      opt.classList.add('wrong'); G.misses++; SFX.wrong();
       target.className='fb no'; target.innerHTML='✗ '+FEEDBACK[q].no;
       setTimeout(()=>opt.classList.remove('wrong'),400);
     }
@@ -1471,17 +1539,17 @@ function onSolved(q){
   if(['i1','i2','i3'].every(k=>solved[k])){ document.getElementById('insp-done').disabled=false; }
 }
 document.getElementById('bp-done').onclick=()=>{
-  closeModal('bp');
+  SFX.click(); closeModal('bp');
   if(G.phase===0){ gotoPhase(1);
     toast(T('bp_done_tag'),T('bp_done'),T('bp_done_ref')); }
 };
 document.getElementById('calc-done').onclick=()=>{
-  closeModal('calc');
+  SFX.click(); closeModal('calc');
   if(G.phase===1){ G.hasWire=true; gotoPhase(2); setTool(3);
     toast(T('mat_tag'),T('mat'),T('mat_ref')); }
 };
 document.getElementById('insp-done').onclick=()=>{
-  closeModal('insp'); gotoPhase(7);
+  SFX.click(); closeModal('insp'); gotoPhase(7);
   const dt=Math.round((Date.now()-G.t0)/1000);
   document.getElementById('stat-time').textContent=String(Math.floor(dt/60)).padStart(2,'0')+':'+String(dt%60).padStart(2,'0');
   document.getElementById('stat-miss').textContent=G.misses;
@@ -1496,7 +1564,7 @@ addEventListener('keydown',e=>{
 });
 
 // ---------------- 主循环 ----------------
-const testerTip=document.getElementById('tester-tip');
+const testerTip=document.getElementById('tester-tip'); let _prevTester=null;
 let started=false;
 function animate(){
   requestAnimationFrame(animate);
@@ -1508,7 +1576,7 @@ function animate(){
     // Hover glow 转换
     if(newAimed!==prevAimed){
       if(prevAimed) setHoverGlow(prevAimed,false);
-      if(newAimed) setHoverGlow(newAimed,true);
+      if(newAimed){ setHoverGlow(newAimed,true); SFX.hover(); }
       prevAimed=newAimed;
     }
     aimed=newAimed;
@@ -1532,11 +1600,13 @@ function animate(){
       const known=['panel','j1','j2','outlet'].includes(pt);
       if(known){
         const live=isLive(pt);
+        const ts=pt+(live?'L':'D');
+        if(ts!==_prevTester){ _prevTester=ts; SFX.tester(live); }
         testerTip.className=live?'live':'dead';
         testerTip.textContent=live?T('tl'):T('td');
         testerTip.style.display='block';
-      }else testerTip.style.display='none';
-    }else testerTip.style.display='none';
+      }else{ testerTip.style.display='none'; _prevTester=null; }
+    }else{ testerTip.style.display='none'; _prevTester=null; }
 
     // 光标可见性跟随 locked 状态
     if(cursorGroups[tool]) cursorGroups[tool].visible=true;
@@ -1563,6 +1633,7 @@ initToolbar();
 setDiningPower(false); setKitchenPower(false);
 renderSteps(0);
 document.getElementById('start-btn').onclick=()=>{
+  SFX.click();
   document.getElementById('start').style.display='none';
   started=true; G.t0=Date.now();
   canvas.requestPointerLock();
